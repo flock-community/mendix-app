@@ -1,0 +1,170 @@
+# Starts the Mendix app (mendix/) and its Next.js rebuild (nextjs/) side by side
+# and runs the Playwright suite (e2e/) against both.
+#
+# The Mendix run goes first and captures the screenshot baselines; the Next.js
+# run is then compared against them. So every run checks the rebuild against
+# Mendix as it renders on that commit. The baselines are uploaded as an
+# artifact, to commit them when you want the comparison to hold still.
+name: e2e
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # mxcli release to download; pin a version tag to make runs reproducible.
+  MXCLI_RELEASE: nightly
+  # Demo user password for both apps on this throwaway runner (not a secret).
+  E2E_PASSWORD: Choose-a-passw0rd
+  DEMO_PASSWORD: Choose-a-passw0rd
+  MENDIX_URL: http://localhost:8080
+  NEXTJS_URL: http://localhost:3000
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            nextjs/package-lock.json
+            e2e/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # ---- Next.js ------------------------------------------------------------
+
+      - name: Build the Next.js app
+        working-directory: nextjs
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Start the Next.js app
+        working-directory: nextjs
+        env:
+          PORT: "3000"
+          # Mendix shows its demo user switcher when run locally (development
+          # mode); show it here too so the screenshots match.
+          DEMO_USER_SWITCHER: "true"
+        run: |
+          nohup npm run start > "${RUNNER_TEMP}/nextjs.log" 2>&1 &
+          curl -fsS -o /dev/null --retry 30 --retry-delay 2 --retry-all-errors "${NEXTJS_URL}/login.html"
+
+      # ---- Mendix -------------------------------------------------------------
+
+      # MxBuild and the Mendix runtime (several hundred MB) are downloaded into
+      # ~/.mxcli once per Mendix version.
+      - name: Cache MxBuild and the Mendix runtime
+        uses: actions/cache@v4
+        with:
+          path: ~/.mxcli
+          key: mxcli-${{ runner.os }}-mendix-11.16.0-${{ env.MXCLI_RELEASE }}
+
+      # HSQLDB is the runtime's built-in database (and the one the project's own
+      # configuration names), so no database server is needed. For PostgreSQL,
+      # as in the README, add a postgres service and use --ensure-db instead.
+      # A failure here still lets the Next.js run go ahead; the job fails at the end.
+      - name: Start the Mendix app
+        id: start_mendix
+        continue-on-error: true
+        working-directory: mendix
+        run: |
+          curl -fsSL -o ./mxcli "https://github.com/mendixlabs/mxcli/releases/download/${MXCLI_RELEASE}/mxcli-linux-amd64"
+          chmod +x ./mxcli
+          ./mxcli -p TodoApp.mpr -c "create or modify demo user 'demo_user' ( Password: '${E2E_PASSWORD}', UserRoles: (User) );"
+          ./mxcli -p TodoApp.mpr -c "create or modify demo user 'demo_administrator' ( Password: '${E2E_PASSWORD}', UserRoles: (Administrator) );"
+          ./mxcli run --local --setup --db-type hsqldb -p TodoApp.mpr
+          ./mxcli run --local --detach --db-type hsqldb -p TodoApp.mpr
+          ./mxcli run wait --ready --timeout 15m -p TodoApp.mpr
+          curl -fsS -o /dev/null --retry 30 --retry-delay 5 --retry-all-errors "${MENDIX_URL}/login.html"
+
+      # ---- e2e ----------------------------------------------------------------
+
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: e2e against Mendix (captures the screenshot baselines)
+        id: mendix
+        if: steps.start_mendix.outcome == 'success'
+        continue-on-error: true
+        working-directory: e2e
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/mendix
+        run: npx playwright test --project=mendix --update-snapshots=all --output=test-results/mendix
+
+      - name: e2e against Next.js (compared with the Mendix screenshots)
+        id: nextjs
+        continue-on-error: true
+        working-directory: e2e
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/nextjs
+        run: npx playwright test --project=nextjs --output=test-results/nextjs
+
+      # ---- results --------------------------------------------------------------
+
+      - name: Upload the Playwright reports and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the Mendix screenshot baselines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mendix-baselines
+          path: e2e/tests/__screenshots__/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload the app logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-logs
+          path: |
+            mendix/.mxcli/*.log
+            ${{ runner.temp }}/nextjs.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop the Mendix app
+        if: always() && steps.start_mendix.outcome != 'skipped'
+        working-directory: mendix
+        run: ./mxcli run stop -p TodoApp.mpr || true
+
+      - name: Fail when either app did not pass
+        if: always()
+        run: |
+          echo "Mendix started:      ${{ steps.start_mendix.outcome }}"
+          echo "e2e against Mendix:  ${{ steps.mendix.outcome }}"
+          echo "e2e against Next.js: ${{ steps.nextjs.outcome }}"
+          test "${{ steps.start_mendix.outcome }}" = success
+          test "${{ steps.mendix.outcome }}" = success
+          test "${{ steps.nextjs.outcome }}" = success

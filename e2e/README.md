@@ -105,6 +105,29 @@ switcher's tab on the right edge of every page. Start the rebuild with
 `DEMO_USER_SWITCHER=true` when comparing against such baselines, so it shows the
 tab too.
 
+## In CI
+
+`.github/workflows/e2e.yml` runs on every push (and by hand from the Actions
+tab). On one runner it:
+
+1. Builds the rebuild (type check and unit tests first) and starts it on port 3000.
+2. Downloads mxcli, gives both demo users the test password, and starts the
+   Mendix app on port 8080 with `mxcli run --local --db-type hsqldb`. MxBuild
+   and the runtime are cached in `~/.mxcli`.
+3. Runs the suite against Mendix with `--update-snapshots=all`, so its
+   screenshots become the baselines.
+4. Runs the suite against the rebuild, which compares its screenshots with those.
+5. Uploads the HTML reports (`playwright` artifact), the Mendix baselines
+   (`mendix-baselines`) and both apps' logs (`app-logs`).
+
+The job fails when Mendix does not start or either run has a failing test. A
+Mendix failure does not stop the rebuild's run. The rebuild runs with
+`DEMO_USER_SWITCHER=true` because Mendix shows the switcher's tab when it runs
+locally.
+
+Set `MXCLI_RELEASE` in the workflow to a release tag to stop following mxcli's
+nightly build.
+
 ## Texts that come from Mendix, not the model
 
 The login error, the Yes/No captions of a Boolean and the required-field

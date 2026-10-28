@@ -72,3 +72,5 @@ anywhere real: `alter app security ( EnableDemoUsers: false );`.
 [`nextjs/`](nextjs) rebuilds the app in Next.js, with the Mendix theme compiled
 from `mendix/` so it looks the same. See its README to run it, and
 [`e2e/`](e2e) to check both apps against the same scenarios and screenshots.
+The `e2e` GitHub Actions workflow starts both apps and runs the suite against
+each on every push.
