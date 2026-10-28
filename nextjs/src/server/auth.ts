@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
-import { db } from "./db";
+import { db, demoUsers, demoUserSwitcherEnabled } from "./db";
 
 /** Mendix's session cookie name, kept so the two apps look alike to a browser. */
 export const SESSION_COOKIE = "XASSESSIONID";
@@ -24,6 +24,13 @@ export function verifyCredentials(name: string, password: string): SessionUser |
     const ok = bcrypt.compareSync(password, row?.password_hash ?? DUMMY_HASH);
     if (!row || !ok || !row.active) return null;
     return { id: row.id, name: row.name, role: row.role };
+}
+
+/** A demo user by name, for the demo user switcher; null for anyone else or when the switcher is off. */
+export function demoUser(name: string): SessionUser | null {
+    if (!demoUserSwitcherEnabled() || !demoUsers().some(u => u.name === name)) return null;
+    const row = db().prepare("SELECT id, name, role FROM users WHERE name = ? AND active = 1").get(name) as SessionUser | undefined;
+    return row ? { id: row.id, name: row.name, role: row.role } : null;
 }
 
 export function createSession(userId: number): string {

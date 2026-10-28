@@ -19,6 +19,8 @@ export { DatePicker, Calendar } from "./core/datepicker";
 export type { DatePickerProps, CalendarProps } from "./core/datepicker";
 export { PopupWindow } from "./core/popup";
 export type { PopupWindowProps } from "./core/popup";
+export { DemoUserSwitcher } from "./core/demousers";
+export type { DemoUserSwitcherProps, DemoUser } from "./core/demousers";
 
 // Pluggable widgets
 export { Datagrid } from "./widgets/datagrid/Datagrid";

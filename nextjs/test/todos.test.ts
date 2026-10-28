@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { before, test } from "node:test";
 
-import { verifyCredentials } from "../src/server/auth";
+import { demoUser, verifyCredentials } from "../src/server/auth";
 import { db } from "../src/server/db";
 import * as todos from "../src/server/todos";
 
@@ -21,6 +21,18 @@ test("the demo users exist with the configured password", () => {
     assert.ok(verifyCredentials("demo_user", "Choose-a-passw0rd"));
     assert.equal(verifyCredentials("demo_user", "wrong"), null);
     assert.equal(verifyCredentials("nobody", "Choose-a-passw0rd"), null);
+});
+
+test("signing in without a password needs the demo user switcher on", () => {
+    delete process.env.DEMO_USER_SWITCHER;
+    assert.equal(demoUser("demo_user"), null);
+    process.env.DEMO_USER_SWITCHER = "true";
+    try {
+        assert.equal(demoUser("demo_user")?.name, "demo_user");
+        assert.equal(demoUser("someone_else"), null);
+    } finally {
+        delete process.env.DEMO_USER_SWITCHER;
+    }
 });
 
 test("a todo needs a title", () => {

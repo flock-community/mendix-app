@@ -64,6 +64,16 @@ export function demoUsers(): Array<{ name: string; role: "User" | "Administrator
     ];
 }
 
+/**
+ * Whether pages show Mendix's demo user switcher, which signs in as any demo
+ * user without a password. Mendix shows it in development mode only; here it
+ * follows DEMO_USER_SWITCHER, and is on under `next dev` when that is unset.
+ */
+export function demoUserSwitcherEnabled(): boolean {
+    const setting = process.env.DEMO_USER_SWITCHER;
+    return setting ? setting === "true" : process.env.NODE_ENV === "development";
+}
+
 /** Mendix's hash settings: BCrypt, cost 12. */
 export const BCRYPT_COST = 12;
 

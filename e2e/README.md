@@ -100,6 +100,11 @@ The viewport is 1280×800, the browser runs in en-US and UTC, and the colour
 scheme is forced to light, except in the dark-mode test. The theme follows the
 OS colour scheme.
 
+A Mendix app run locally (development mode, demo users on) shows the demo user
+switcher's tab on the right edge of every page. Start the rebuild with
+`DEMO_USER_SWITCHER=true` when comparing against such baselines, so it shows the
+tab too.
+
 ## Texts that come from Mendix, not the model
 
 The login error, the Yes/No captions of a Boolean and the required-field

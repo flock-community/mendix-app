@@ -37,6 +37,7 @@ npm run start
 | `DATABASE_PATH` | `data/todoapp.db` | SQLite file, created on first use |
 | `DEMO_PASSWORD` | `Choose-a-passw0rd` | Password for both demo users |
 | `DEMO_USER_PASSWORD`, `DEMO_ADMINISTRATOR_PASSWORD` | `DEMO_PASSWORD` | Per user |
+| `DEMO_USER_SWITCHER` | `true` under `next dev`, else `false` | Show Mendix's demo user switcher, which signs in as a demo user without a password. Mendix shows it in development mode only; never turn it on where the app is reachable by others |
 
 `npm test` runs the server's unit tests (filter compiler, validation, per-user
 access). `npm run typecheck` type-checks the app and the component library.
