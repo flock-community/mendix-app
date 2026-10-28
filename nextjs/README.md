@@ -118,3 +118,17 @@ picker, popup window, menu bar) follow the Mendix React client as closely as
 its CSS reveals. Run the e2e suite against both apps to find the differences
 that are left. `npm run baseline:mendix` and then `npm run test:nextjs` in
 `../e2e` compare the two pixel by pixel.
+
+These choices were inferred rather than seen, and are the first places to
+look when the two apps differ:
+
+| What | Chosen | Why |
+|------|--------|-----|
+| Menu bar list | `<ul class="mx-menubar-list nav">`: no bullets, indent or bottom margin | Without a reset the list bullet shows in dark mode, which the mxcli theme (written against real output) does not correct |
+| Date picker | Input fills the row, calendar button at its end, popup calendar in `.mx-calendar` markup | Atlas styles `.mx-compound-control` and `.mx-calendar`; the exact element structure is not in the CSS |
+| Form labels | Above the inputs (`form-group no-columns`) | Mendix 10+ default; the page sets no form orientation |
+| Popup window | 600px wide (mxui's default), centred in the viewport | `PopupWidth` 0 in the model |
+| Delete button | Deletes without asking | The model's delete action has no confirmation setting |
+| Date-time column | `M/d/yyyy, h:mm a` | The en-US pattern the Data widgets fall back to |
+| Sorting | Empty due dates first when ascending; ties by creation order | HSQLDB's and SQLite's default, the database the model's configuration names |
+| Language selector | Shows no current language | Demo users have none set, so the widget finds no match |

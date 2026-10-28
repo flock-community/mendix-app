@@ -122,7 +122,8 @@ export interface MenuBarProps {
 export function MenuBar({ name, className, orientation = "horizontal", items }: MenuBarProps) {
     return (
         <div className={cx("mx-menubar", mxName(name), { "mx-menubar-vertical": orientation === "vertical" }, className)}>
-            <ul className="mx-menubar-list" role="menubar">
+            {/* Bootstrap's "nav" resets the list (no bullets, indent or bottom margin); Atlas styles the rest. */}
+            <ul className="mx-menubar-list nav" role="menubar">
                 {items.map(item => (
                     <li key={item.href + item.caption} className={cx("mx-menubar-item", { active: item.active })} role="none">
                         <a
