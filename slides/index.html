@@ -425,8 +425,12 @@
     </div>
     <div class="io" style="grid-template-columns: repeat(3, 1fr); margin-top: 22px;">
       <div><b>In</b><p>Every push to the repository</p></div>
-      <div><b>Out</b><p>Reports and screenshot diffs, kept per run</p></div>
+      <div><b>Out</b><p>Reports, screenshot diffs and both apps' DOM, kept per run</p></div>
       <div class="done"><b>Done when</b><p>All tests pass on both apps, and no screenshot differs</p></div>
+    </div>
+    <div class="ai-strip">
+      <img src="logos/claude.svg" alt="">
+      <p><b>Claude Code closed the loop:</b> after each run it diffed Mendix's DOM against the rebuild's, fixed every difference it found and pushed again, until all 85 tests passed on both apps.</p>
     </div>
   </section>
 
@@ -485,7 +489,7 @@
         <p class="hint">Left of the line: the Mendix app. Right: the rebuild. Both captured in CI on the same commit.</p>
       </div>
       <div class="verdict">
-        <div class="card"><b>__OVERVIEW_DIFF__</b><span>of pixels differ on this screen (__OVERVIEW_PIXELS__ of 1,024,000)</span></div>
+        <div class="card"><b>0 pixels</b><span>differ, of the screen's 1,024,000: the two screenshots are identical</span></div>
         <div class="card"><b>1%</b><span>is the most a screenshot may differ before the build fails</span></div>
       </div>
     </div>
@@ -503,7 +507,7 @@
           <input type="range" min="0" max="100" value="50" aria-label="Split between Mendix (left) and Next.js (right): edit popup">
           <div class="handle" aria-hidden="true"></div>
         </div>
-        <figcaption><span>Edit popup</span><b>__popup-edit__ differ</b></figcaption>
+        <figcaption><span>Edit popup</span><b>identical</b></figcaption>
       </figure>
       <figure>
         <div class="compare">
@@ -512,7 +516,7 @@
           <input type="range" min="0" max="100" value="50" aria-label="Split between Mendix (left) and Next.js (right): dark mode">
           <div class="handle" aria-hidden="true"></div>
         </div>
-        <figcaption><span>Dark mode</span><b>__overview-dark__ differ</b></figcaption>
+        <figcaption><span>Dark mode</span><b>identical</b></figcaption>
       </figure>
       <figure>
         <div class="compare">
@@ -521,7 +525,7 @@
           <input type="range" min="0" max="100" value="50" aria-label="Split between Mendix (left) and Next.js (right): phone">
           <div class="handle" aria-hidden="true"></div>
         </div>
-        <figcaption><span>Phone</span><b>__overview-phone__</b></figcaption>
+        <figcaption><span>Phone</span><b>identical</b></figcaption>
       </figure>
     </div>
     <p class="hint">Mendix on the left of each line, Next.js on the right. Drag to compare.</p>
@@ -534,14 +538,30 @@
     <div class="results">
       <div>
         <ul class="screens" aria-label="Pixels that differ from Mendix, per screenshot">
-__RESULT_ROWS__
+          <li><span>Login page</span><b class="ok">identical</b></li>
+          <li><span>Login, wrong password</span><b class="ok">identical</b></li>
+          <li><span>Empty todo list</span><b class="ok">0.07%</b></li>
+          <li><span>Todo list</span><b class="ok">identical</b></li>
+          <li><span>Row hover</span><b class="ok">identical</b></li>
+          <li><span>Sorted by title</span><b class="ok">identical</b></li>
+          <li><span>New todo popup</span><b class="ok">0.02%</b></li>
+          <li><span>Validation error</span><b class="ok">0.03%</b></li>
+          <li><span>Edit popup</span><b class="ok">identical</b></li>
+          <li><span>Priority combo box</span><b class="ok">0.02%</b></li>
+          <li><span>Date picker</span><b class="ok">0.44%</b></li>
+          <li><span>Priority filter</span><b class="ok">identical</b></li>
+          <li><span>Title filter operators</span><b class="ok">0.07%</b></li>
+          <li><span>Column selector</span><b class="ok">identical</b></li>
+          <li><span>Delete confirmation</span><b class="ok">identical</b></li>
+          <li><span>Dark mode</span><b class="ok">identical</b></li>
+          <li><span>Phone</span><b class="ok">identical</b></li>
         </ul>
-        <p class="hint">Share of pixels that differ from the Mendix screenshot. The build fails above 1%.</p>
+        <p class="hint">Pixels that differ from the Mendix screenshot of the same screen. The build fails above 1%.</p>
       </div>
       <div class="stats">
-        <div class="stat"><b>__MENDIX_PASSED__</b><span>tests pass on the Mendix app</span></div>
-        <div class="stat"><b>__NEXTJS_PASSED__</b><span>tests pass on the Next.js rebuild: the same tests</span></div>
-        <div class="stat"><b>__SCREENS_OK__</b><span>screenshots within 1% of Mendix's, compared in CI on every push</span></div>
+        <div class="stat"><b>85 / 85</b><span>tests pass on the Mendix app</span></div>
+        <div class="stat"><b>85 / 85</b><span>tests pass on the Next.js rebuild: the same tests</span></div>
+        <div class="stat"><b>11 of 17</b><span>screenshots identical to Mendix's, pixel for pixel; the other 6 within 0.44%</span></div>
       </div>
     </div>
   </section>
