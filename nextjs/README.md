@@ -108,27 +108,42 @@ libraries those widgets use (downshift, floating-ui, react-datepicker), so
 keyboard and ARIA behaviour match too. The library ships TypeScript source, so
 an app lists it in `transpilePackages` (see `next.config.mjs`).
 
-## What could not be checked against a running Mendix app
+## Checking against the running Mendix app
 
-The rebuild was written from the model (`.mpr` units, MDL, theme, widget
+The rebuild was first written from the model (`.mpr` units, MDL, theme, widget
 packages), because mxcli could not run in the environment it was built in. The
-pluggable widgets' markup is taken from their code and should be exact. The
-core client widgets (scroll container, layout grid, data view, inputs, date
-picker, popup window, menu bar) follow the Mendix React client as closely as
-its CSS reveals. Run the e2e suite against both apps to find the differences
-that are left. `npm run baseline:mendix` and then `npm run test:nextjs` in
-`../e2e` compare the two pixel by pixel.
+pluggable widgets' markup is taken from their code. The `e2e` workflow now
+starts the Mendix app in CI and runs the suite against both apps, comparing the
+rebuild's screenshots with Mendix's (`npm run baseline:mendix`, then
+`npm run test:nextjs` in `../e2e`, does the same locally).
 
-These choices were inferred rather than seen, and are the first places to
-look when the two apps differ:
+The first runs against a running Mendix app (in CI) corrected these guesses.
+The DOM came from the Playwright traces of those runs, and now comes from the
+`.html` each visual test writes next to its screenshot:
+
+| What | Guessed | Mendix renders |
+|------|---------|----------------|
+| Menu bar | `div.mx-menubar > ul.mx-menubar-list` with an active item | A Bootstrap navbar: `div.navbar.mx-navbar > ul.nav.navbar-nav > li.mx-navbar-item`, no active item |
+| Delete button | Deletes without asking | Asks "Are you sure you want to delete this?" in a `.mx-dialog` (`confirmation()`), with the button `aria-disabled` meanwhile |
+| Date-time column | `M/d/yyyy, h:mm a` | The date only, `M/d/yyyy` |
+| Language selector | Shows no current language | Shows the app's default language, "English, United States" |
+| Page frame | `#content > .mx-page[data-page]`, layout classes on the scroll container | `#root.profile-desktop.role-<role> > .mx-page.<layout classes>`; without side regions the center region is `.mx-scrollcontainer-middle` itself |
+| Layout grid | `col-lg-12 col-md-12 col-12` | `container-fluid`, and tablet and phone default to auto-fill: `col-lg-12 col-md col` |
+| Check box | Label before, no form group without a label | `label-after form-group no-columns`, label after the box |
+| Buttons | `disabled` attribute | `aria-disabled` and `data-disabled`, `title=""`, `data-button-id="p.<page>.<name>"` |
+| Stylesheets | Theme, then widgets | Widgets (`dist/widgets.css`), then the theme |
+| Demo user switcher | "Demo users", administrator first | "Select user" with Mendix's description, demo_user first |
+| Form labels | Above the inputs (`form-group no-columns`) | A horizontal data view form: `form-horizontal`, labels `col-sm-3`, inputs and validation in `col-sm-9` |
+| Popup window | 600px inline, centred, underlay first at z-index 1000 | No inline width (the theme's 600px), at 35% of the free height, z-index 102 with the underlay after it; the popup layout is a sidebar scroll container |
+| Text inputs | Pass the value on per key stroke | Pass it on when the user leaves the field, so a validation message stays until then |
+| Text area, date input | Five rows; no placeholder, glyphicon button | No rows attribute (two lines); `m/d/yyyy` placeholder and Atlas's filled calendar icon |
+| Date picker calendar | Glyphicon arrows, two-letter weekdays, placed 4px under the input and button | Atlas's add, subtract and chevron icons, `Sun`…`Sat` with full-name titles, days labelled with their date, a year switcher; placed right under the input at unrounded `left`/`top` |
+| Empty grid | A placeholder row | No body rows, unless the grid has empty-list content |
+| Combo box menu | Placed with a rounded transform | Right under the input at unrounded `top`/`left` |
+
+These choices are still inferred rather than seen, and are the first places
+to look when the two apps differ:
 
 | What | Chosen | Why |
 |------|--------|-----|
-| Menu bar list | `<ul class="mx-menubar-list nav">`: no bullets, indent or bottom margin | Without a reset the list bullet shows in dark mode, which the mxcli theme (written against real output) does not correct |
-| Date picker | Input fills the row, calendar button at its end, popup calendar in `.mx-calendar` markup | Atlas styles `.mx-compound-control` and `.mx-calendar`; the exact element structure is not in the CSS |
-| Form labels | Above the inputs (`form-group no-columns`) | Mendix 10+ default; the page sets no form orientation |
-| Popup window | 600px wide (mxui's default), centred in the viewport | `PopupWidth` 0 in the model |
-| Delete button | Deletes without asking | The model's delete action has no confirmation setting |
-| Date-time column | `M/d/yyyy, h:mm a` | The en-US pattern the Data widgets fall back to |
 | Sorting | Empty due dates first when ascending; ties by creation order | HSQLDB's and SQLite's default, the database the model's configuration names |
-| Language selector | Shows no current language | Demo users have none set, so the widget finds no match |

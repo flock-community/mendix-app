@@ -116,7 +116,7 @@ export function Combobox(props: ComboboxProps) {
         }
     });
 
-    const { refs, floatingStyles } = useFloating({
+    const { refs, x, y, strategy } = useFloating({
         open: isOpen,
         placement: "bottom-start",
         strategy: "fixed",
@@ -124,7 +124,9 @@ export function Combobox(props: ComboboxProps) {
             flip(),
             size({
                 apply({ rects, elements }) {
-                    Object.assign(elements.floating.style, { width: `${rects.reference.width}px` });
+                    // Only the open menu takes the input's width, as in Mendix.
+                    const hidden = elements.floating.classList.contains("widget-combobox-menu-hidden");
+                    elements.floating.style.width = hidden ? "" : `${rects.reference.width}px`;
                 }
             })
         ],
@@ -158,7 +160,9 @@ export function Combobox(props: ComboboxProps) {
                                 disabled: readOnly,
                                 readOnly: filterType === "none",
                                 ref: inputRef,
-                                "aria-label": props.label ? undefined : props.ariaLabel
+                                "aria-label": props.label ? undefined : props.ariaLabel,
+                                "aria-required": false,
+                                tabIndex: 0
                             })}
                             placeholder=" "
                         />
@@ -167,6 +171,7 @@ export function Combobox(props: ComboboxProps) {
                     {!readOnly && clearable && selectedItem && (
                         <button
                             className="widget-combobox-clear-button"
+                            tabIndex={0}
                             aria-label={props.clearButtonAriaLabel ?? "Clear selection"}
                             onClick={event => {
                                 event.stopPropagation();
@@ -189,7 +194,7 @@ export function Combobox(props: ComboboxProps) {
                         {props.error}
                     </div>
                 ) : null}
-                <div ref={refs.setFloating} className={cx("widget-combobox-menu", { "widget-combobox-menu-hidden": !isOpen })} style={isOpen ? floatingStyles : { visibility: "hidden", position: "fixed" }}>
+                <div ref={refs.setFloating} className={cx("widget-combobox-menu", { "widget-combobox-menu-hidden": !isOpen })} style={isOpen ? { visibility: "visible", position: strategy, top: y, left: x } : { visibility: "hidden", position: "fixed" }}>
                     <ul className="widget-combobox-menu-list" {...getMenuProps({ onMouseDown: e => e.preventDefault() }, { suppressRefError: true })}>
                         {isOpen &&
                             (shown.length === 0 ? (

@@ -54,7 +54,7 @@ export interface TextFilterProps {
 }
 
 /** Data grid 2 text filter (com.mendix.widget.web.datagridtextfilter). */
-export function TextFilter({ name, className, defaultFilter = "contains", adjustable = true, placeholder, delay = 500, screenReaderButtonCaption, screenReaderInputCaption }: TextFilterProps) {
+export function TextFilter({ name, className, defaultFilter = "contains", adjustable = true, placeholder = "", delay = 500, screenReaderButtonCaption, screenReaderInputCaption }: TextFilterProps) {
     const { attribute, setCondition } = useColumnFilter("Text filter");
     const [type, setType] = useState<TextFilterType>(defaultFilter);
     const [value, setValue] = useState("");

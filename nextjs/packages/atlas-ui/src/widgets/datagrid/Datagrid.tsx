@@ -79,7 +79,7 @@ export interface DatagridProps<T extends { id: string }> {
     columnsHidable?: boolean;
     columnsFilterable?: boolean;
     loadingType?: "spinner" | "skeleton";
-    /** Shown in a full-width row when there are no items. */
+    /** Shown in a full-width row when there are no items; without it an empty grid has no body rows, as in Mendix. */
     emptyPlaceholder?: ReactNode;
     rowClass?: (item: T) => string | undefined;
     labels?: Partial<DatagridLabels>;
@@ -334,9 +334,10 @@ export function Datagrid<T extends { id: string }>(props: DatagridProps<T>) {
                                         {columnsHidable && <div className={cx("td", { "td-borders": rowIndex === 0 }, "column-selector")} role="gridcell" tabIndex={-1} />}
                                     </div>
                                 ))}
-                                {items.length === 0 && (
+                                {/* Only a grid with empty-list content shows the placeholder row. */}
+                                {items.length === 0 && props.emptyPlaceholder !== undefined && (
                                     <div className="td td-borders" style={{ gridColumn: `span ${visible.length + (columnsHidable ? 1 : 0)}` }}>
-                                        <div className="empty-placeholder">{props.emptyPlaceholder ?? <div />}</div>
+                                        <div className="empty-placeholder">{props.emptyPlaceholder}</div>
                                     </div>
                                 )}
                             </>
@@ -703,7 +704,7 @@ function Pagination(props: {
                 <PagingIcon direction="backward" />
             </button>
             <span className="sr-only sr-only-focusable">
-                {labels.pagingStatus} {status}
+                {`${labels.pagingStatus} ${status}`}
             </span>
             <div aria-hidden={true} className="paging-status">
                 {status}

@@ -1,5 +1,5 @@
 import { test, expect } from "../support/fixtures";
-import { uid, usDate } from "../support/app";
+import { DELETE_QUESTION, uid, usDate } from "../support/app";
 
 test.describe("Mark done and delete", () => {
     test("Done / undo marks an open todo done and moves it below the open ones", async ({ todos }) => {
@@ -49,7 +49,7 @@ test.describe("Mark done and delete", () => {
         await expect(overview.row(title).doneCheckbox).toBeDisabled();
     });
 
-    test("Delete removes the todo straight away", async ({ todos, page }) => {
+    test("Delete asks for confirmation, and OK removes the todo", async ({ todos, page }) => {
         const { overview } = todos;
         const id = uid();
         const keep = `Keep ${id}`;
@@ -58,6 +58,10 @@ test.describe("Mark done and delete", () => {
         await overview.create({ title: remove });
 
         await overview.row(remove).deleteButton.click();
+        await overview.confirmation.expectOpen(DELETE_QUESTION);
+        await expect(overview.row(remove).deleteButton).toHaveAttribute("aria-disabled", "true");
+        await overview.confirmation.ok.click();
+        await overview.confirmation.expectClosed();
 
         await expect(overview.row(remove).root).toHaveCount(0);
         await expect(overview.row(keep).root).toHaveCount(1);
@@ -66,6 +70,25 @@ test.describe("Mark done and delete", () => {
         await page.reload();
         await overview.waitForGrid();
         await expect(overview.row(remove).root).toHaveCount(0);
+    });
+
+    test("Cancel or closing the confirmation keeps the todo", async ({ todos }) => {
+        const { overview } = todos;
+        const title = `Not now ${uid()}`;
+        await overview.create({ title });
+
+        await overview.row(title).deleteButton.click();
+        await overview.confirmation.expectOpen(DELETE_QUESTION);
+        await overview.confirmation.cancel.click();
+        await overview.confirmation.expectClosed();
+        await expect(overview.row(title).root).toHaveCount(1);
+        await expect(overview.row(title).deleteButton).not.toHaveAttribute("aria-disabled", "true");
+
+        await overview.row(title).deleteButton.click();
+        await overview.confirmation.expectOpen(DELETE_QUESTION);
+        await overview.confirmation.close.click();
+        await overview.confirmation.expectClosed();
+        await expect(overview.row(title).root).toHaveCount(1);
     });
 
     test("the action buttons have the model's captions and styles", async ({ todos }) => {

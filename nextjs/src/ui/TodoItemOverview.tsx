@@ -4,6 +4,7 @@ import {
     ActionButton,
     CheckBox,
     Column,
+    confirmation,
     Datagrid,
     DateFilter,
     DropdownFilter,
@@ -18,7 +19,7 @@ import {
 import { formatBoolean, formatDate } from "@flock-community/atlas-ui/format";
 import { useMemo, useState } from "react";
 import { newTodoItem, PRIORITIES, type TodoItem, type TodoItemInput } from "../model/todo";
-import { AppDefaultLayout } from "./AppDefaultLayout";
+import { APP_DEFAULT_CLASS, AppDefaultLayout } from "./AppDefaultLayout";
 import { deleteTodo, fetchTodos, toggleDone } from "./api";
 import { TodoItemNewEdit } from "./TodoItemNewEdit";
 
@@ -55,7 +56,7 @@ export function TodoItemOverview() {
             {
                 header: "Due date",
                 attribute: { id: "DueDate", type: "DateTime" },
-                display: item => formatDate(item.DueDate, "datetime"),
+                display: item => formatDate(item.DueDate),
                 filter: <DateFilter name="fDueDate" />
             },
             {
@@ -66,7 +67,18 @@ export function TodoItemOverview() {
                     <>
                         <ActionButton name="btnToggle" caption="Done / undo" onClick={() => toggleDone(item.id).then(reload)} />
                         <ActionButton name="btnEdit" caption="Edit" onClick={() => setPopup({ id: item.id, initial: { ...item } })} />
-                        <ActionButton name="btnDelete" caption="Delete" buttonStyle="danger" onClick={() => deleteTodo(item.id).then(reload)} />
+                        <ActionButton
+                            name="btnDelete"
+                            caption="Delete"
+                            buttonStyle="danger"
+                            onClick={async () => {
+                                // A delete action asks first (Mendix's system text).
+                                if (await confirmation({ question: "Are you sure you want to delete this?" })) {
+                                    await deleteTodo(item.id);
+                                    reload();
+                                }
+                            }}
+                        />
                     </>
                 )
             }
@@ -75,7 +87,7 @@ export function TodoItemOverview() {
     );
 
     return (
-        <Page page="Todo.TodoItem_Overview">
+        <Page page="Todo.TodoItem_Overview" className={APP_DEFAULT_CLASS}>
             <AppDefaultLayout>
                 <LayoutGrid name="mainGrid">
                     <Row>

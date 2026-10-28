@@ -79,7 +79,7 @@ export interface DateFilterProps {
 }
 
 /** Data grid 2 date filter (com.mendix.widget.web.datagriddatefilter), on react-datepicker like the original. */
-export function DateFilter({ name, className, defaultFilter = "equal", adjustable = true, placeholder, screenReaderButtonCaption, screenReaderCalendarCaption, screenReaderInputCaption }: DateFilterProps) {
+export function DateFilter({ name, className, defaultFilter = "equal", adjustable = true, placeholder = "", screenReaderButtonCaption, screenReaderCalendarCaption, screenReaderInputCaption }: DateFilterProps) {
     const { attribute, setCondition } = useColumnFilter("Date filter");
     const id = useWidgetId("DateFilter");
     const [portalId] = useState(() => `datepicker_${Math.random()}`);

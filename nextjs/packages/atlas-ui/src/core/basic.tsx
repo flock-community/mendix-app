@@ -2,6 +2,7 @@
 
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { cx, mxName } from "../util/cx";
+import { usePageName } from "./page";
 
 // ---------------------------------------------------------------------------
 // Icons
@@ -36,7 +37,7 @@ export interface DynamicTextProps {
 
 export function DynamicText({ name, className, renderMode = "text", children }: DynamicTextProps) {
     const Tag = renderMode === "text" ? "span" : renderMode === "paragraph" ? "p" : renderMode;
-    return <Tag className={cx(mxName(name), "mx-text", className)}>{children}</Tag>;
+    return <Tag className={cx("mx-text", mxName(name), className)}>{children}</Tag>;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,10 +63,12 @@ export interface ActionButtonProps {
 
 export function ActionButton(props: ActionButtonProps) {
     const { buttonStyle = "default", renderType = "button", disabledDuringExecution = true } = props;
+    const page = usePageName();
     const [busy, setBusy] = useState(false);
+    const disabled = Boolean(props.disabled || busy);
     const handleClick = (event: MouseEvent<HTMLElement>) => {
         if (renderType === "link") event.preventDefault();
-        if (!props.onClick || busy) return;
+        if (!props.onClick || disabled) return;
         const result = props.onClick(event);
         if (disabledDuringExecution && result instanceof Promise) {
             setBusy(true);
@@ -87,11 +90,14 @@ export function ActionButton(props: ActionButtonProps) {
         );
     }
     return (
+        // Mendix marks a disabled button with aria-disabled and data-disabled, not the disabled attribute.
         <button
             type="button"
             className={cx("btn", "mx-button", mxName(props.name), `btn-${buttonStyle}`, props.className)}
-            title={props.tooltip}
-            disabled={props.disabled || busy}
+            title={props.tooltip ?? ""}
+            aria-disabled={disabled ? "true" : undefined}
+            data-disabled={String(disabled)}
+            data-button-id={page ? `p.${page}.${props.name}` : undefined}
             onClick={handleClick}
             tabIndex={props.tabIndex}
         >
@@ -119,25 +125,28 @@ export interface MenuBarProps {
     items: MenuItem[];
 }
 
+/**
+ * The menu bar widget (Forms$MenuBar). The React client renders it as a
+ * Bootstrap navbar: div.navbar.mx-navbar > ul.nav.navbar-nav > li.mx-navbar-item.
+ */
 export function MenuBar({ name, className, orientation = "horizontal", items }: MenuBarProps) {
     return (
-        <div className={cx("mx-menubar", mxName(name), { "mx-menubar-vertical": orientation === "vertical" }, className)}>
-            {/* Bootstrap's "nav" resets the list (no bullets, indent or bottom margin); Atlas styles the rest. */}
-            <ul className="mx-menubar-list nav" role="menubar">
-                {items.map(item => (
-                    <li key={item.href + item.caption} className={cx("mx-menubar-item", { active: item.active })} role="none">
+        <div className={cx("navbar", "navbar-default", "mx-navbar", mxName(name), { "mx-navbar-vertical": orientation === "vertical" }, className)} tabIndex={-1}>
+            <ul className="nav navbar-nav" role="menu">
+                {items.map((item, index) => (
+                    <li key={item.href + item.caption} className={cx("mx-navbar-item", { active: item.active })} role="none">
                         <a
+                            className={name ? `mx-name-${name}-${index}` : undefined}
                             href={item.href}
                             role="menuitem"
-                            aria-current={item.active ? "page" : undefined}
+                            title={item.caption}
                             onClick={event => {
                                 if (!item.onNavigate || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
                                 event.preventDefault();
                                 item.onNavigate(item.href);
                             }}
                         >
-                            {item.icon && <Icon spec={item.icon} />}
-                            {item.caption}
+                            {item.icon && <Icon spec={item.icon} />} {item.caption}
                         </a>
                     </li>
                 ))}

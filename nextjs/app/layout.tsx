@@ -3,22 +3,20 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-    title: "Mendix",
+    title: { default: "Mendix", template: "Mendix - %s" },
     icons: { icon: [] }
 };
 
-/** index.html of the Mendix app: the compiled theme, the widget CSS and a #content root. */
+/** index.html of the Mendix app: the widget CSS, the compiled theme and the icon fonts. Pages render #root (AppRoot). */
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
-        <html lang="en">
+        <html lang="en-US">
             <head>
                 {atlasStylesheets.map(href => (
                     <link key={href} rel="stylesheet" href={href} />
                 ))}
             </head>
-            <body dir="ltr">
-                <div id="content">{children}</div>
-            </body>
+            <body dir="ltr">{children}</body>
         </html>
     );
 }

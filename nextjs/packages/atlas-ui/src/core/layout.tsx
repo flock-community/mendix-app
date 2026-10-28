@@ -7,21 +7,6 @@ import { cx, mxName } from "../util/cx";
  * Atlas layout rules (layout-atlas-*, region-*, mx-scrollcontainer-*) apply.
  */
 
-export interface PageProps {
-    /** Qualified page name, e.g. "Todo.TodoItem_Overview"; rendered as a data attribute. */
-    page: string;
-    className?: string;
-    children: ReactNode;
-}
-
-export function Page({ page, className, children }: PageProps) {
-    return (
-        <div className={cx("mx-page", className)} data-page={page}>
-            {children}
-        </div>
-    );
-}
-
 export function Placeholder({ children, className }: { children?: ReactNode; className?: string }) {
     return <div className={cx("mx-placeholder", className)}>{children}</div>;
 }
@@ -48,9 +33,11 @@ export interface ScrollContainerProps {
     style?: CSSProperties;
 }
 
-function Region({ side, region }: { side: "top" | "left" | "right" | "bottom" | "center"; region: RegionProps | undefined }) {
+function Region({ side, region }: { side: "top" | "left" | "right" | "bottom" | "center" | "middle"; region: RegionProps | undefined }) {
     if (!region) return null;
-    const style = region.size !== undefined ? ({ "--sidebar-size": `${region.size}px` } as CSSProperties) : undefined;
+    // A side region is sized in px, or "fit content" (min-content); the center fills the rest.
+    const sized = side !== "center" && side !== "middle";
+    const style = sized ? ({ "--sidebar-size": region.size !== undefined ? `${region.size}px` : "min-content" } as CSSProperties) : undefined;
     return (
         <div className={cx(`mx-scrollcontainer-${side}`, region.className)} style={style}>
             <div className="mx-scrollcontainer-wrapper">{region.children}</div>
@@ -69,11 +56,21 @@ export function ScrollContainer(props: ScrollContainerProps) {
     );
     const rootClass = cx(
         "mx-scrollcontainer",
-        { "mx-scrollcontainer-fixed": scrollBehavior === "perRegion" },
         layoutMode === "headline" ? "mx-scrollcontainer-vertical" : "mx-scrollcontainer-horizontal",
+        { "mx-scrollcontainer-fixed": scrollBehavior === "perRegion" },
         props.className,
         mxName(props.name)
     );
+    if (layoutMode === "headline" && !props.left && !props.right) {
+        // Without side regions the center is the middle row itself.
+        return (
+            <div className={rootClass} style={props.style}>
+                <Region side="top" region={props.top} />
+                <Region side="middle" region={props.center} />
+                <Region side="bottom" region={props.bottom} />
+            </div>
+        );
+    }
     if (layoutMode === "headline") {
         return (
             <div className={rootClass} style={props.style}>
@@ -83,8 +80,19 @@ export function ScrollContainer(props: ScrollContainerProps) {
             </div>
         );
     }
+    const sidebarStyle = { "--toggleable-sidebar-width": "0px", ...props.style } as CSSProperties;
+    if (!props.top && !props.bottom) {
+        // Without top and bottom regions the center sits in the container itself.
+        return (
+            <div className={rootClass} style={sidebarStyle}>
+                <Region side="left" region={props.left} />
+                <Region side="center" region={props.center} />
+                <Region side="right" region={props.right} />
+            </div>
+        );
+    }
     return (
-        <div className={rootClass} style={props.style}>
+        <div className={rootClass} style={sidebarStyle}>
             <Region side="left" region={props.left} />
             <div className="mx-scrollcontainer-middle mx-scrollcontainer-vertical">
                 <Region side="top" region={props.top} />
@@ -111,7 +119,8 @@ export interface LayoutGridProps {
 }
 
 export function LayoutGrid({ name, className, width = "fullWidth", children }: LayoutGridProps) {
-    return <div className={cx("mx-layoutgrid", width === "fullWidth" ? "mx-layoutgrid-fluid" : "mx-layoutgrid-fixed", className, mxName(name))}>{children}</div>;
+    const widthClass = width === "fullWidth" ? "mx-layoutgrid-fluid container-fluid" : "mx-layoutgrid-fixed container";
+    return <div className={cx(mxName(name), "mx-layoutgrid", widthClass, className)}>{children}</div>;
 }
 
 export function Row({ className, children }: { className?: string; children: ReactNode }) {
@@ -126,7 +135,7 @@ function columnClass(infix: string, weight: ColumnWeight): string {
 }
 
 export interface ColumnProps {
-    /** Desktop width. Tablet and phone inherit it unless set. */
+    /** Desktop width. Tablet and phone default to "autofill", as in Mendix. */
     desktop: ColumnWeight;
     tablet?: ColumnWeight;
     phone?: ColumnWeight;
@@ -135,7 +144,7 @@ export interface ColumnProps {
 }
 
 export function Column({ desktop, tablet, phone, className, children }: ColumnProps) {
-    return <div className={cx(columnClass("lg", desktop), columnClass("md", tablet ?? desktop), columnClass("", phone ?? tablet ?? desktop), className)}>{children}</div>;
+    return <div className={cx(columnClass("lg", desktop), columnClass("md", tablet ?? "autofill"), columnClass("", phone ?? "autofill"), className)}>{children}</div>;
 }
 
 // ---------------------------------------------------------------------------

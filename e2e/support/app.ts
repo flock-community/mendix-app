@@ -31,6 +31,9 @@ export function uid(): string {
     return `${Date.now().toString(36).slice(-5)}${counter}`;
 }
 
+/** The question Mendix asks before a delete action. */
+export const DELETE_QUESTION = "Are you sure you want to delete this?";
+
 function exact(text: string): RegExp {
     return new RegExp(`^\\s*${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`);
 }
@@ -130,6 +133,35 @@ export class EditTodoPopup {
     }
 }
 
+/** Mendix's confirmation dialog (DialogMessage), e.g. before a delete. */
+export class ConfirmationDialog {
+    readonly root: Locator;
+    readonly caption: Locator;
+    readonly question: Locator;
+    readonly ok: Locator;
+    readonly cancel: Locator;
+    readonly close: Locator;
+
+    constructor(readonly page: Page) {
+        this.root = page.locator(".modal-dialog.mx-dialog");
+        this.caption = this.root.locator(".mx-dialog-caption");
+        this.question = this.root.locator(".mx-dialog-body");
+        this.ok = this.root.locator(".mx-dialog-footer .btn-primary");
+        this.cancel = this.root.locator(".mx-dialog-footer .btn:not(.btn-primary)");
+        this.close = this.root.locator(".mx-dialog-close");
+    }
+
+    async expectOpen(question: string): Promise<void> {
+        await expect(this.root).toBeVisible();
+        await expect(this.caption).toHaveText("Confirmation");
+        await expect(this.question).toHaveText(question);
+    }
+
+    async expectClosed(): Promise<void> {
+        await expect(this.root).toHaveCount(0);
+    }
+}
+
 export class TodoRow {
     constructor(readonly root: Locator) {}
 
@@ -168,6 +200,7 @@ export class OverviewPage {
     readonly rows: Locator;
     readonly pagingStatus: Locator;
     readonly popup: EditTodoPopup;
+    readonly confirmation: ConfirmationDialog;
 
     constructor(readonly page: Page) {
         this.heading = page.locator(".mx-name-heading");
@@ -177,6 +210,7 @@ export class OverviewPage {
         this.rows = this.grid.locator(".widget-datagrid-grid-body > .tr");
         this.pagingStatus = this.grid.locator(".paging-status");
         this.popup = new EditTodoPopup(page);
+        this.confirmation = new ConfirmationDialog(page);
     }
 
     async goto(): Promise<void> {
@@ -225,6 +259,14 @@ export class OverviewPage {
         await expect(this.row(todo.title).root).toHaveCount(1);
     }
 
+    /** Deletes a row: Delete, then OK in the confirmation Mendix asks. */
+    async delete(row: TodoRow): Promise<void> {
+        await row.deleteButton.click();
+        await this.confirmation.expectOpen(DELETE_QUESTION);
+        await this.confirmation.ok.click();
+        await this.confirmation.expectClosed();
+    }
+
     /** Deletes every todo the signed-in user has, page by page. */
     async deleteAll(): Promise<void> {
         await this.waitForGrid();
@@ -234,7 +276,7 @@ export class OverviewPage {
                 return;
             }
             const status = await this.pagingStatus.innerText();
-            await this.rowAt(0).deleteButton.click();
+            await this.delete(this.rowAt(0));
             await expect(this.pagingStatus).not.toHaveText(status);
         }
         throw new Error("deleteAll did not finish");
@@ -271,10 +313,32 @@ export class OverviewPage {
 export class TodoApp {
     readonly login: LoginPage;
     readonly overview: OverviewPage;
+    /** The CSRF token the Mendix client sends with its requests; the rebuild has none. */
+    private csrfToken: string | undefined;
 
     constructor(readonly page: Page) {
         this.login = new LoginPage(page);
         this.overview = new OverviewPage(page);
+        page.on("request", request => {
+            const token = request.headers()["x-csrf-token"];
+            if (token) this.csrfToken = token;
+        });
+    }
+
+    /**
+     * Ends the session, as the client's sign-out does. An unlicensed Mendix
+     * runtime allows six sessions at a time and keeps an idle one for ten
+     * minutes, so every test signs out when it is done (see fixtures.ts).
+     */
+    async signOut(): Promise<void> {
+        if (this.page.isClosed() || !/^https?:/.test(this.page.url())) return;
+        await this.page.request
+            .post(new URL("/xas/", this.page.url()).href, {
+                data: { action: "logout", params: {} },
+                headers: this.csrfToken ? { "X-Csrf-Token": this.csrfToken } : {},
+                failOnStatusCode: false
+            })
+            .catch(() => undefined);
     }
 
     /** Signs in through the login page and waits for the home page. */
