@@ -9,6 +9,11 @@ import { users } from "../support/env";
  * them with `npm run baseline:mendix`, then `npm run test:nextjs` compares the
  * rebuild with them. Until a baseline exists, a test takes its screenshot,
  * attaches it to the report and skips, rather than passing against itself.
+ *
+ * Each comparison also leaves the page's DOM (<name>.html) in the test's output
+ * folder, and on the rebuild its own screenshot (<name>.png), which a passing
+ * comparison would not keep: the run's artifacts then hold both apps' markup
+ * and screenshots side by side.
  */
 
 async function snap(testInfo: TestInfo, target: Page | Locator, name: string): Promise<void> {
@@ -19,7 +24,15 @@ async function snap(testInfo: TestInfo, target: Page | Locator, name: string): P
         await testInfo.attach(`${name} (no baseline yet)`, { body: shot, contentType: "image/png" });
         test.skip(true, `No Mendix baseline for ${name}: run "npm run baseline:mendix" against the Mendix app first`);
     }
-    await expect(target).toHaveScreenshot(name);
+    const page = "page" in target && typeof target.page === "function" ? target.page() : (target as Page);
+    try {
+        await expect(target).toHaveScreenshot(name);
+    } finally {
+        fs.writeFileSync(testInfo.outputPath(name.replace(/\.png$/, ".html")), await page.content());
+        if (testInfo.project.name !== "mendix") {
+            await target.screenshot({ path: testInfo.outputPath(name), animations: "disabled", caret: "hide", scale: "css" });
+        }
+    }
 }
 
 async function seed(overview: OverviewPage): Promise<void> {

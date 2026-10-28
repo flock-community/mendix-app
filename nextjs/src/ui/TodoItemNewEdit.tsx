@@ -26,7 +26,8 @@ export function TodoItemNewEdit({ id, initial, onSaved, onCancel }: TodoItemNewE
     const change = <K extends keyof TodoItemInput>(key: K, value: TodoItemInput[K]) => {
         latest.current = { ...latest.current, [key]: value };
         setValues(latest.current);
-        // A changed attribute drops its validation feedback, as in Mendix.
+        // A changed attribute drops its validation feedback, as in Mendix. Text
+        // inputs change their attribute when the user leaves them.
         if (errors[key]) {
             setErrors(current => {
                 const next = { ...current };
@@ -43,7 +44,7 @@ export function TodoItemNewEdit({ id, initial, onSaved, onCancel }: TodoItemNewE
     };
 
     return (
-        <PopupWindow name="TodoItem_NewEdit" caption="Edit todo" onClose={onCancel}>
+        <PopupWindow page="Todo.TodoItem_NewEdit" caption="Edit todo" onClose={onCancel}>
             <PopupLayout>
                 <LayoutGrid name="formGrid">
                     <Row>
@@ -58,7 +59,7 @@ export function TodoItemNewEdit({ id, initial, onSaved, onCancel }: TodoItemNewE
                                 }
                             >
                                 <TextBox name="txtTitle" label="Title" value={values.Title} maxLength={TITLE_LENGTH} error={errors.Title} onChange={v => change("Title", v)} />
-                                <TextArea name="txtDescription" label="Description" rows={3} value={values.Description} maxLength={DESCRIPTION_LENGTH} error={errors.Description} onChange={v => change("Description", v)} />
+                                <TextArea name="txtDescription" label="Description" value={values.Description} maxLength={DESCRIPTION_LENGTH} error={errors.Description} onChange={v => change("Description", v)} />
                                 <DatePicker
                                     name="dpDueDate"
                                     label="Due date"

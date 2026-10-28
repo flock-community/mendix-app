@@ -1,19 +1,24 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
 import { cx, mxName } from "../util/cx";
 import { useWidgetId } from "../util/useId";
 
 /**
- * Data view and input widgets. A labelled input renders the way Mendix does:
+ * Data view and input widgets. A labelled input renders the way Mendix does.
+ * In a data view with a horizontal form (Mendix's default, label width 3):
  *
- *   <div class="mx-name-x mx-textbox form-group no-columns [has-error]">
- *     <label class="control-label" for="…">Label</label>
- *     <input class="form-control" …>
- *     <div class="alert alert-danger mx-validation-message">…</div>
+ *   <div class="mx-name-x mx-textbox form-group [has-error]">
+ *     <label class="control-label col-sm-3" for="…">Label</label>
+ *     <div class="col-sm-9">
+ *       <input class="form-control" …>
+ *       <div class="alert alert-danger mx-validation-message">…</div>
+ *     </div>
  *   </div>
  *
- * Without a label the form-group classes are dropped.
+ * Elsewhere (a grid cell, a vertical form) the label sits above the input and
+ * the group is "form-group no-columns", without the column wrapper. Without
+ * a label the form-group classes are dropped, except on check boxes.
  */
 
 // ---------------------------------------------------------------------------
@@ -22,6 +27,8 @@ import { useWidgetId } from "../util/useId";
 
 interface DataViewContextValue {
     editable: boolean;
+    /** The data view's form layout; undefined outside a data view. */
+    form?: { orientation: "horizontal" | "vertical"; labelWidth: number };
 }
 
 const DataViewContext = createContext<DataViewContextValue>({ editable: true });
@@ -34,14 +41,17 @@ export interface DataViewProps {
     name: string;
     className?: string;
     editable?: boolean;
+    /** Mendix's default is a horizontal form with labels 3 of 12 columns wide. */
+    formOrientation?: "horizontal" | "vertical";
+    labelWidth?: number;
     footer?: ReactNode;
     children: ReactNode;
 }
 
-export function DataView({ name, className, editable = true, footer, children }: DataViewProps) {
+export function DataView({ name, className, editable = true, formOrientation = "horizontal", labelWidth = 3, footer, children }: DataViewProps) {
     return (
-        <DataViewContext.Provider value={{ editable }}>
-            <div className={cx("mx-dataview", mxName(name), className)}>
+        <DataViewContext.Provider value={{ editable, form: { orientation: formOrientation, labelWidth } }}>
+            <div className={cx("mx-dataview", mxName(name), formOrientation === "horizontal" ? "form-horizontal" : "form-vertical", className)}>
                 <div className="mx-dataview-content">{children}</div>
                 {footer !== undefined && <div className="mx-dataview-controls">{footer}</div>}
             </div>
@@ -73,21 +83,43 @@ export interface FormGroupProps {
     errorId?: string;
     /** Render as a form group even without a label, as Mendix does for check boxes. */
     group?: boolean;
+    /** The label follows the input (check boxes): in a horizontal form both sit in the offset input column. */
+    labelAfter?: boolean;
     children: ReactNode;
 }
 
-export function FormGroup({ name, widgetClass, className, label, labelFor, labelId, error, errorId, group, children }: FormGroupProps) {
+export function FormGroup({ name, widgetClass, className, label, labelFor, labelId, error, errorId, group, labelAfter, children }: FormGroupProps) {
+    const { form } = useDataView();
+    const horizontal = form?.orientation === "horizontal";
+    const labelWidth = form?.labelWidth ?? 3;
     const hasLabel = label !== undefined && label !== null && label !== "";
     const grouped = group || hasLabel;
-    return (
-        <div className={cx(mxName(name), widgetClass, className, { "form-group": grouped, "no-columns": grouped, "has-error": !!error })}>
-            {hasLabel && (
-                <label className="control-label" id={labelId} htmlFor={labelFor}>
-                    {label}
-                </label>
-            )}
+    const labelElement = hasLabel ? (
+        <label className={cx("control-label", { [`col-sm-${labelWidth}`]: horizontal && !labelAfter })} id={labelAfter ? undefined : labelId} htmlFor={labelFor}>
+            {label}
+        </label>
+    ) : null;
+    const errorElement = error ? <ValidationMessage id={errorId}>{error}</ValidationMessage> : null;
+    const body = labelAfter ? (
+        <>
             {children}
-            {error ? <ValidationMessage id={errorId}>{error}</ValidationMessage> : null}
+            {labelElement}
+            {errorElement}
+        </>
+    ) : (
+        <>
+            {children}
+            {errorElement}
+        </>
+    );
+    return (
+        <div className={cx(mxName(name), widgetClass, className, { "form-group": grouped, "no-columns": grouped && !horizontal, "has-error": !!error })}>
+            {!labelAfter && labelElement}
+            {horizontal && grouped ? (
+                <div className={cx(`col-sm-${12 - labelWidth}`, { [`col-sm-offset-${labelWidth}`]: labelAfter || !hasLabel })}>{body}</div>
+            ) : (
+                body
+            )}
         </div>
     );
 }
@@ -110,6 +142,23 @@ interface InputBaseProps<T> {
     placeholder?: string;
 }
 
+/**
+ * The text being typed into an input. Like Mendix's text box and text area
+ * ("apply changes when the user leaves the field"), the value is passed on
+ * when the input loses focus, not on every key stroke.
+ */
+function useDraft(value: string, onChange: ((value: string) => void) | undefined) {
+    const [draft, setDraft] = useState<string | null>(null);
+    return {
+        value: draft ?? value,
+        onChange: (next: string) => setDraft(next),
+        onBlur: () => {
+            if (draft !== null && draft !== value) onChange?.(draft);
+            setDraft(null);
+        }
+    };
+}
+
 function useEditable(editable: boolean | undefined): boolean {
     const dataView = useDataView();
     return editable ?? dataView.editable;
@@ -124,6 +173,7 @@ export interface TextBoxProps extends InputBaseProps<string> {
 export function TextBox(props: TextBoxProps) {
     const id = useWidgetId("textBox");
     const editable = useEditable(props.editable);
+    const draft = useDraft(props.value, props.onChange);
     if (!editable && props.readOnlyStyle === "text") {
         return (
             <FormGroup name={props.name} widgetClass="mx-textbox" className={props.className} label={props.label} labelFor={id}>
@@ -139,7 +189,7 @@ export function TextBox(props: TextBoxProps) {
                 id={id}
                 type={props.password ? "password" : "text"}
                 className="form-control"
-                value={props.value}
+                value={draft.value}
                 maxLength={props.maxLength}
                 placeholder={props.placeholder}
                 autoComplete={props.autoComplete ?? "on"}
@@ -148,20 +198,25 @@ export function TextBox(props: TextBoxProps) {
                 aria-readonly={!editable || undefined}
                 aria-invalid={props.error ? true : undefined}
                 aria-describedby={props.error ? `${id}-error` : undefined}
-                onChange={event => props.onChange?.(event.target.value)}
+                onChange={event => draft.onChange(event.target.value)}
+                onBlur={draft.onBlur}
             />
         </FormGroup>
     );
 }
 
 export interface TextAreaProps extends InputBaseProps<string> {
+    /** Mendix sets no rows attribute; the browser shows two lines. */
     rows?: number;
     maxLength?: number;
+    /** The model's "number of lines", passed on as --suggested-height (Mendix: 70px). */
+    suggestedHeight?: number;
 }
 
 export function TextArea(props: TextAreaProps) {
     const id = useWidgetId("textArea");
     const editable = useEditable(props.editable);
+    const draft = useDraft(props.value, props.onChange);
     return (
         <FormGroup name={props.name} widgetClass="mx-textarea" className={props.className} label={props.label} labelFor={id} labelId={`${id}-label`} error={props.error} errorId={`${id}-error`}>
             {!editable && props.readOnlyStyle === "text" ? (
@@ -169,16 +224,18 @@ export function TextArea(props: TextAreaProps) {
             ) : (
                 <textarea
                     id={id}
-                    className="form-control mx-textarea-noresize"
-                    rows={props.rows ?? 5}
-                    value={props.value}
+                    className="form-control mx-textarea-input mx-textarea-noresize"
+                    style={{ "--suggested-height": `${props.suggestedHeight ?? 70}px` } as CSSProperties}
+                    rows={props.rows}
+                    value={draft.value}
                     maxLength={props.maxLength}
                     placeholder={props.placeholder}
                     readOnly={!editable}
                     autoFocus={props.autoFocus}
                     aria-invalid={props.error ? true : undefined}
                     aria-describedby={props.error ? `${id}-error` : undefined}
-                    onChange={event => props.onChange?.(event.target.value)}
+                    onChange={event => draft.onChange(event.target.value)}
+                    onBlur={draft.onBlur}
                 />
             )}
         </FormGroup>
@@ -217,17 +274,13 @@ export function CheckBox(props: CheckBoxProps) {
             name={props.name}
             widgetClass="mx-checkbox"
             className={cx({ "label-after": labelPosition === "after" }, props.className)}
-            label={labelPosition === "after" ? undefined : props.label}
+            label={props.label}
             labelFor={id}
             error={props.error}
             group
+            labelAfter={labelPosition === "after"}
         >
             {input}
-            {labelPosition === "after" && props.label ? (
-                <label className="control-label" htmlFor={id}>
-                    {props.label}
-                </label>
-            ) : null}
         </FormGroup>
     );
 }

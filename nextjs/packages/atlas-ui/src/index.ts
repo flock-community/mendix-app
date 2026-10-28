@@ -5,7 +5,7 @@
  */
 
 // Page structure
-export { AppRoot, Page, usePageName } from "./core/page";
+export { AppRoot, Page, PageScope, usePageName } from "./core/page";
 export type { AppRootProps, PageProps } from "./core/page";
 export { Placeholder, ScrollContainer, LayoutGrid, Row, Column, Container, containerDesign } from "./core/layout";
 export type { ScrollContainerProps, RegionProps, LayoutGridProps, ColumnProps, ColumnWeight, ContainerProps } from "./core/layout";

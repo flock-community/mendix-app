@@ -184,9 +184,10 @@ export function DatePicker(props: DatePickerProps) {
                 <input
                     id={id}
                     type="text"
-                    className="form-control mx-dateinput-input"
+                    className="form-control"
                     value={text}
-                    placeholder={props.placeholder}
+                    // Mendix shows the date pattern, lower-cased: m/d/yyyy.
+                    placeholder={props.placeholder ?? getLocale().patterns.date.toLowerCase()}
                     readOnly={!editable}
                     aria-invalid={error ? true : undefined}
                     aria-describedby={error ? `${id}-error` : undefined}
@@ -197,15 +198,8 @@ export function DatePicker(props: DatePickerProps) {
                     }}
                 />
                 {editable && (
-                    <button
-                        type="button"
-                        className="btn mx-button mx-dateinput-select-button"
-                        aria-label="Show date picker"
-                        aria-haspopup="dialog"
-                        aria-expanded={open}
-                        onClick={() => setOpen(o => !o)}
-                    >
-                        <span className="glyphicon glyphicon-calendar" aria-hidden="true" />
+                    <button type="button" className="btn mx-button" aria-label="Show date picker" tabIndex={-1} onClick={() => setOpen(o => !o)}>
+                        <span className="mx-icon-filled mx-icon-calendar" />
                     </button>
                 )}
             </div>

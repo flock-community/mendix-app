@@ -124,7 +124,9 @@ export function Combobox(props: ComboboxProps) {
             flip(),
             size({
                 apply({ rects, elements }) {
-                    Object.assign(elements.floating.style, { width: `${rects.reference.width}px` });
+                    // Only the open menu takes the input's width, as in Mendix.
+                    const hidden = elements.floating.classList.contains("widget-combobox-menu-hidden");
+                    elements.floating.style.width = hidden ? "" : `${rects.reference.width}px`;
                 }
             })
         ],
@@ -158,7 +160,9 @@ export function Combobox(props: ComboboxProps) {
                                 disabled: readOnly,
                                 readOnly: filterType === "none",
                                 ref: inputRef,
-                                "aria-label": props.label ? undefined : props.ariaLabel
+                                "aria-label": props.label ? undefined : props.ariaLabel,
+                                "aria-required": false,
+                                tabIndex: 0
                             })}
                             placeholder=" "
                         />
@@ -167,6 +171,7 @@ export function Combobox(props: ComboboxProps) {
                     {!readOnly && clearable && selectedItem && (
                         <button
                             className="widget-combobox-clear-button"
+                            tabIndex={0}
                             aria-label={props.clearButtonAriaLabel ?? "Clear selection"}
                             onClick={event => {
                                 event.stopPropagation();

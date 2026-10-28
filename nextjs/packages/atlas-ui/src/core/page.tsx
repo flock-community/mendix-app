@@ -10,6 +10,11 @@ export function usePageName(): string | undefined {
     return useContext(PageContext);
 }
 
+/** Makes `page` the current page for the widgets inside, without a page root (a popup's content). */
+export function PageScope({ page, children }: { page: string; children: ReactNode }) {
+    return <PageContext.Provider value={page}>{children}</PageContext.Provider>;
+}
+
 export interface PageProps {
     /** Qualified page name, e.g. "Todo.TodoItem_Overview"; widgets derive their ids from it. */
     page: string;

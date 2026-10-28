@@ -96,6 +96,13 @@ anti-aliasing. Until a baseline exists, a visual test takes its screenshot,
 attaches it to the HTML report (`npm run report`) and skips. It never passes
 against itself.
 
+Each visual test also writes the page's DOM (`<name>.html`) to its folder in
+`test-results/`, and on the rebuild its own screenshot (`<name>.png`), which
+a passing comparison would not keep. In CI these land in the `playwright`
+artifact next to the `mendix-baselines` one, so a run shows both apps'
+markup and screenshots side by side. Diffing the two DOMs is the quickest way
+to find why a screenshot differs.
+
 The viewport is 1280×800, the browser runs in en-US and UTC, and the colour
 scheme is forced to light, except in the dark-mode test. The theme follows the
 OS colour scheme.

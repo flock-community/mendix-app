@@ -80,8 +80,19 @@ export function ScrollContainer(props: ScrollContainerProps) {
             </div>
         );
     }
+    const sidebarStyle = { "--toggleable-sidebar-width": "0px", ...props.style } as CSSProperties;
+    if (!props.top && !props.bottom) {
+        // Without top and bottom regions the center sits in the container itself.
+        return (
+            <div className={rootClass} style={sidebarStyle}>
+                <Region side="left" region={props.left} />
+                <Region side="center" region={props.center} />
+                <Region side="right" region={props.right} />
+            </div>
+        );
+    }
     return (
-        <div className={rootClass} style={props.style}>
+        <div className={rootClass} style={sidebarStyle}>
             <Region side="left" region={props.left} />
             <div className="mx-scrollcontainer-middle mx-scrollcontainer-vertical">
                 <Region side="top" region={props.top} />

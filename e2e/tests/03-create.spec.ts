@@ -74,9 +74,12 @@ test.describe("Create a todo", () => {
         await popup.expectOpen();
         await expect(overview.rows).toHaveCount(0);
 
-        // Fixing the title clears the error and saves.
+        // Fixing the title clears the error once the field is left, and saves.
         const title = `Fixed later ${uid()}`;
         await popup.fill({ title });
+        await popup.title.press("Tab");
+        await expect(popup.titleGroup.locator(".mx-validation-message")).toHaveCount(0);
+        await expect(popup.titleGroup).not.toHaveClass(/has-error/);
         await popup.save.click();
         await popup.expectClosed();
         await expect(overview.row(title).root).toHaveCount(1);

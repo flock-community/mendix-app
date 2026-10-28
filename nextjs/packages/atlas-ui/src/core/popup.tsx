@@ -2,16 +2,17 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { cx, mxName } from "../util/cx";
+import { cx } from "../util/cx";
 import { useWidgetId } from "../util/useId";
+import { PageScope } from "./page";
 
 export interface PopupWindowProps {
-    /** The page shown in the popup, for the mx-name class. */
-    name?: string;
+    /** The qualified name of the page shown in the popup, e.g. "Todo.TodoItem_NewEdit". */
+    page?: string;
     caption: ReactNode;
     /** Closing the window by its close button or Escape; Mendix cancels the page's changes. */
     onClose: () => void;
-    /** Popup width in px; Mendix's default (the page's width 0) is 600. */
+    /** Popup width in px; without it the theme's .mx-window width applies (600px), as in Mendix. */
     width?: number;
     height?: number;
     className?: string;
@@ -24,10 +25,13 @@ const FOCUSABLE = 'input:not([disabled]):not([type="hidden"]), textarea:not([dis
 
 /**
  * A page shown as a modal popup (a page with a ModalPopup layout): Mendix's
- * window markup with its underlay, centred, draggable by its header.
+ * window markup followed by its underlay, centred horizontally and placed at
+ * 35% of the free height (as the runtime does), draggable by its header.
  */
-export function PopupWindow({ name, caption, onClose, width = 600, height, className, autoFocus = true, children }: PopupWindowProps) {
-    const captionId = useWidgetId("mxui_widget_Window_caption");
+export function PopupWindow({ page, caption, onClose, width, height, className, autoFocus = true, children }: PopupWindowProps) {
+    const windowId = useWidgetId("mxui_widget_Window");
+    const captionId = `${windowId}_caption`;
+    const bodyId = `${windowId}_body`;
     const ref = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState<{ left: number; top: number } | undefined>(undefined);
     const closeRef = useRef(onClose);
@@ -39,8 +43,8 @@ export function PopupWindow({ name, caption, onClose, width = 600, height, class
         const place = () => {
             const rect = node.getBoundingClientRect();
             setPosition({
-                left: Math.max(0, Math.round((window.innerWidth - rect.width) / 2)),
-                top: Math.max(0, Math.round((window.innerHeight - rect.height) / 2))
+                left: Math.max(0, (window.innerWidth - rect.width) / 2),
+                top: Math.max(0, (window.innerHeight - rect.height) * 0.35)
             });
         };
         place();
@@ -82,34 +86,42 @@ export function PopupWindow({ name, caption, onClose, width = 600, height, class
     const style: CSSProperties = {
         width,
         height,
-        zIndex: 1001,
-        left: position?.left ?? 0,
+        zIndex: 102,
         top: position?.top ?? 0,
+        left: position?.left ?? 0,
         visibility: position ? undefined : "hidden"
     };
 
+    const body = page ? <PageScope page={page}>{children}</PageScope> : children;
     return createPortal(
         <>
-            <div className="mx-underlay" style={{ zIndex: 1000 }} />
             <div
                 ref={ref}
-                className={cx("modal-dialog", "mx-window", "mx-window-active", mxName(name), className)}
+                id={windowId}
+                className={cx("modal-dialog", "mx-window", "mx-window-active", className)}
                 role="dialog"
+                data-focus-capturing="modal"
                 aria-modal="true"
                 aria-labelledby={captionId}
+                aria-describedby={bodyId}
                 tabIndex={-1}
                 style={style}
             >
-                <div className="modal-content mx-window-content">
-                    <div className="modal-header mx-window-header" onMouseDown={startDrag}>
-                        <button type="button" className="close mx-window-close" aria-label="close" onClick={() => closeRef.current()}>
+                <div className="modal-content mx-window-content" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                    <div className="modal-header mx-window-header" style={{ userSelect: "none", flex: "0 0 auto" }} onMouseDown={startDrag}>
+                        <button type="button" className="close" title="close" aria-label="close" onClick={() => closeRef.current()}>
                             ×
                         </button>
-                        <h4 id={captionId}>{caption}</h4>
+                        <h4 id={captionId} role="heading" aria-level={2} className="">
+                            {caption}
+                        </h4>
                     </div>
-                    <div className="modal-body mx-window-body">{children}</div>
+                    <div id={bodyId} className="modal-body mx-window-body" style={{ flex: "1 1 auto" }}>
+                        {body}
+                    </div>
                 </div>
             </div>
+            <div className="mx-underlay" style={{ zIndex: 101 }} />
         </>,
         document.body
     );

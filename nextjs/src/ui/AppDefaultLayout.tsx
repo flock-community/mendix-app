@@ -44,5 +44,5 @@ export function AppDefaultLayout({ children }: { children: ReactNode }) {
 
 /** Atlas_Core.PopupLayout: the scroll container a popup page sits in. */
 export function PopupLayout({ children }: { children: ReactNode }) {
-    return <ScrollContainer name="scrollContainer1" center={{ className: "region-content", children: <Placeholder>{children}</Placeholder> }} />;
+    return <ScrollContainer name="scrollContainer1" layoutMode="sidebar" center={{ className: "region-content", children: <Placeholder>{children}</Placeholder> }} />;
 }
