@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mendix to Next.js</title>
-<meta name="description" content="How the TodoApp moved from Mendix to Next.js: the steps and the tech, test-first and pixel-faithful.">
+<title>Rebuilding a Mendix App</title>
+<meta name="description" content="The business case behind rebuilding a Mendix app in code, and a test-first process that keeps the rebuild identical to the original.">
 <style>
   @font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
   @font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
@@ -18,7 +18,8 @@
     --brand: #0f6e6b;
     --brand-deep: #0b5754;
     --brand-tint: #e3efef;
-    --mendix: #0595db;
+    --warn: #8f4207;
+    --warn-tint: #f8ece2;
     --ink: #14181f;
     --muted: #5a6572;
     --faint: #98a1ad;
@@ -60,73 +61,102 @@
   li { margin: 0 0 8px; }
   li::marker { color: var(--brand); }
   .muted { color: var(--muted); }
-  .dark .muted { color: var(--rail-ink); }
   code, .mono { font-family: var(--mono); font-size: .9em; }
   :not(pre) > code { background: var(--brand-tint); color: var(--brand-deep); padding: 1px 6px; border-radius: 4px; }
-  .lead { font-size: 24px; line-height: 1.4; color: var(--muted); max-width: 980px; }
+  .lead { font-size: 24px; line-height: 1.4; color: var(--muted); max-width: 1000px; }
 
-  .grid { display: grid; gap: 24px; }
+  .grid { display: grid; gap: 22px; }
   .cols-2 { grid-template-columns: 1fr 1fr; }
   .cols-3 { grid-template-columns: repeat(3, 1fr); }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 22px 24px; }
   .card p, .card li { font-size: 18px; }
-  .card h3 { display: flex; align-items: center; gap: 10px; }
+  .card p:last-child { margin-bottom: 0; }
 
-  .logos { display: flex; flex-wrap: wrap; gap: 14px; margin-top: auto; }
+  .logos { display: flex; flex-wrap: wrap; gap: 14px; }
   .logo { display: inline-flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px 8px 10px; font-size: 16px; font-weight: 500; }
   .logo img { width: 28px; height: 28px; object-fit: contain; }
-  .chip { display: inline-flex; align-items: center; background: var(--brand-tint); color: var(--brand-deep); border-radius: 999px; padding: 6px 14px; font-size: 15px; font-weight: 500; }
 
   /* Title slide */
   .title-mark { display: flex; align-items: center; gap: 28px; margin-bottom: 44px; }
   .title-mark img { width: 92px; height: 92px; }
   .title-mark .arrow { font-size: 48px; color: #3fbdb8; }
-  .title-sub { font-size: 28px; color: var(--rail-ink); margin-top: 22px; max-width: 900px; line-height: 1.35; }
+  .title-sub { font-size: 28px; color: var(--rail-ink); margin-top: 22px; max-width: 920px; line-height: 1.35; }
   .title-foot { margin-top: auto; display: flex; align-items: center; gap: 12px; color: var(--rail-ink); font-size: 18px; }
   .title-foot img { width: 22px; height: 22px; }
 
-  /* Step flow */
-  .flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-top: 8px; }
-  .flow .step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 16px 18px; min-height: 250px; }
+  /* Business drivers */
+  .drivers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .driver { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px; }
+  .driver .icon { width: 40px; height: 40px; border-radius: 8px; background: var(--brand-tint); color: var(--brand-deep); display: grid; place-items: center; font-size: 20px; margin-bottom: 12px; }
+  .driver h3 { font-size: 19px; margin-bottom: 6px; }
+  .driver p { font-size: 16.5px; color: var(--muted); margin: 0; line-height: 1.45; }
+
+  /* Risk table */
+  table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 11px 18px; font-size: 17px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.4; }
+  th { background: #edf2f2; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td.risk { width: 34%; font-weight: 500; }
+  td.risk::before { content: "!"; display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 10px; border-radius: 50%; background: var(--warn-tint); color: var(--warn); font-size: 13px; font-weight: 700; vertical-align: 1px; }
+
+  /* Fit check */
+  .fit h3 { display: flex; align-items: center; gap: 10px; }
+  .fit .tag { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; }
+  .fit .yes { background: var(--brand-tint); color: var(--brand-deep); }
+  .fit .no { background: var(--warn-tint); color: var(--warn); }
+
+  /* Process overview */
+  .flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-top: 4px; }
+  .flow .step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 16px 18px; min-height: 230px; }
   .flow .step:not(:last-child)::after { content: "→"; position: absolute; right: -15px; top: 30px; color: var(--brand); font-size: 22px; font-weight: 600; }
+  .flow .step.loop { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
   .num { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: 17px; margin-bottom: 14px; }
   .flow h3 { font-size: 19px; }
   .flow p { font-size: 15.5px; color: var(--muted); margin: 0; }
-  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 28px; }
-  .pillar { border-left: 4px solid var(--brand); padding: 4px 0 4px 16px; }
-  .pillar h3 { font-size: 19px; margin-bottom: 4px; }
-  .pillar p { font-size: 16.5px; color: var(--muted); margin: 0; }
+  .loop-note { display: flex; align-items: center; gap: 12px; margin-top: 26px; font-size: 19px; color: var(--muted); }
+  .loop-note b { color: var(--brand-deep); }
 
-  /* Step header with logos at the right */
+  /* Phase slides */
   .step-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
   .step-head .logos { margin-top: 4px; justify-content: flex-end; max-width: 520px; }
+  .phase { display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; }
+  .io { display: grid; gap: 12px; align-content: start; }
+  .io div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+  .io b { display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .io p { font-size: 17px; margin: 0; }
+  .io .done { border-color: var(--brand); background: #f3f9f9; }
+  .io .done b { color: var(--brand-deep); }
 
-  /* Code */
-  pre { margin: 0; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 20px 22px; font-family: var(--mono); font-size: 15.5px; line-height: 1.55; overflow: hidden; }
-  .tk-k { color: #ff7b72; } .tk-s { color: #a5d6ff; } .tk-c { color: #8b949e; } .tk-t { color: #7ee787; } .tk-a { color: #d2a8ff; }
-
-  /* Mapping table */
-  table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-  th, td { text-align: left; padding: 10px 16px; font-size: 16.5px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { background: #edf2f2; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-  tr:last-child td { border-bottom: 0; }
-  td:first-child { color: var(--muted); width: 38%; }
+  pre { margin: 0; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 18px 20px; font-family: var(--mono); font-size: 15px; line-height: 1.55; overflow: hidden; }
+  .tk-s { color: #a5d6ff; } .tk-c { color: #8b949e; } .tk-t { color: #7ee787; }
 
   /* CI pipeline */
-  .pipeline { display: grid; grid-template-columns: 1fr 34px 1fr 34px 1fr 34px 1fr; align-items: stretch; margin-top: 6px; }
-  .stage { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
-  .stage h3 { font-size: 17px; margin-bottom: 6px; }
-  .stage p { font-size: 14.5px; color: var(--muted); margin: 0 0 6px; }
-  .stage.both { display: grid; gap: 10px; background: transparent; border: 0; padding: 0; }
-  .stage.both > div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+  .pipeline { display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr; align-items: stretch; }
+  .stage { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .stage h3 { font-size: 16.5px; margin-bottom: 4px; }
+  .stage p { font-size: 14.5px; color: var(--muted); margin: 0; line-height: 1.4; }
   .stage.key { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
-  .link { display: grid; place-items: center; color: var(--brand); font-size: 22px; font-weight: 600; }
+  .link { display: grid; place-items: center; color: var(--brand); font-size: 20px; font-weight: 600; }
 
-  /* Stats */
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px; }
-  .stat b { display: block; font-size: 44px; line-height: 1; color: var(--brand); margin-bottom: 10px; letter-spacing: -.02em; }
+  /* Numbers */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 22px; }
+  .stat b { display: block; font-size: 40px; line-height: 1; color: var(--brand); margin-bottom: 8px; letter-spacing: -.02em; }
   .stat span { font-size: 16px; color: var(--muted); line-height: 1.35; display: block; }
+  .split { display: flex; height: 34px; border-radius: 6px; overflow: hidden; margin: 6px 0 10px; font-size: 14px; font-weight: 600; color: #fff; }
+  .split div { display: flex; align-items: center; padding: 0 12px; white-space: nowrap; }
+  .split .lib { background: var(--brand); }
+  .split .app { background: #5a6572; }
+  .legend { font-size: 15.5px; color: var(--muted); }
+
+  /* Portfolio */
+  .apps { display: grid; gap: 10px; }
+  .app-row { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 14px; font-size: 16px; color: var(--muted); }
+  .bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; font-size: 13px; font-weight: 600; color: #fff; }
+  .bar .lib { background: var(--brand); display: flex; align-items: center; padding: 0 10px; }
+  .bar .new { background: #3fbdb8; display: flex; align-items: center; padding: 0 10px; color: var(--ink); }
+  .bar .app { background: #5a6572; display: flex; align-items: center; padding: 0 10px; }
+  .bar .reuse { background: repeating-linear-gradient(135deg, #dce1e7 0 6px, #edf0f3 6px 12px); color: var(--muted); display: flex; align-items: center; padding: 0 10px; }
 
   /* Tech wall */
   .wall { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
@@ -137,14 +167,14 @@
   .tech small { display: block; font-size: 13.5px; color: var(--muted); font-weight: 400; }
   .tech .mark { width: 30px; height: 30px; border-radius: 6px; background: var(--brand-tint); color: var(--brand-deep); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
 
-  /* Footer chrome */
+  /* Chrome */
   .chrome { position: absolute; left: 80px; right: 80px; bottom: 24px; display: flex; justify-content: space-between; font-size: 13px; color: var(--faint); pointer-events: none; }
   .on-dark .chrome { color: #6b7787; }
   .progress { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--brand); transition: width .25s ease; }
   .nav { position: fixed; right: 16px; bottom: 14px; display: flex; align-items: center; gap: 8px; z-index: 2; }
-  .counter { min-width: 56px; text-align: center; font-size: 13px; color: #fff; background: rgba(20,24,31,.72); border-radius: 999px; padding: 6px 10px; font-variant-numeric: tabular-nums; }
   .nav button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(20,24,31,.72); color: #fff; font-size: 18px; cursor: pointer; }
   .nav button:focus-visible { outline: 2px solid #3fbdb8; outline-offset: 2px; }
+  .counter { min-width: 56px; text-align: center; font-size: 13px; color: #fff; background: rgba(20,24,31,.72); border-radius: 999px; padding: 6px 10px; font-variant-numeric: tabular-nums; }
 
   @media print {
     @page { size: 1280px 720px; margin: 0; }
@@ -158,349 +188,312 @@
 </head>
 <body>
 <div class="viewport">
-<main class="deck" id="deck" aria-live="polite">
+<main class="deck" id="deck">
 
-  <!-- 1 -->
+  <!-- 1 Title -->
   <section class="slide dark" aria-label="Title">
     <div class="title-mark">
       <img src="logos/mendix.png" alt="Mendix">
       <span class="arrow" aria-hidden="true">→</span>
       <img src="logos/nextjs-white.svg" alt="Next.js">
     </div>
-    <p class="kicker">Migration approach</p>
-    <h1>From Mendix to Next.js</h1>
-    <p class="title-sub">How the TodoApp was rebuilt test-first, with the original's own theme and markup, and checked against the original on every push.</p>
+    <p class="kicker">Rebuild, don't rewrite</p>
+    <h1>Moving a Mendix app to code</h1>
+    <p class="title-sub">The business case behind it, and a test-first process that keeps the rebuild identical to the original, shown on the TodoApp.</p>
     <div class="title-foot"><img src="logos/github-white.svg" alt="">flock-community/mendix-app</div>
   </section>
 
-  <!-- 2 -->
-  <section class="slide" aria-label="The goal">
-    <p class="kicker">The goal</p>
-    <h2>Same app, new stack, and proof that it is the same</h2>
-    <p class="lead">A Mendix 11 app (todos per user, a data grid with filters, a popup form, demo users) rebuilt as a Next.js app that behaves and looks the same, with parts that carry over to the next migration.</p>
-    <div class="pillars">
-      <div class="pillar"><h3>The original is the spec</h3><p>One end-to-end suite runs against Mendix and the rebuild. What passes on one must pass on the other.</p></div>
-      <div class="pillar"><h3>Reuse the original's look</h3><p>Compile Mendix's own theme and render Mendix's own markup, instead of restyling by eye.</p></div>
-      <div class="pillar"><h3>Built to repeat</h3><p>The theme compiler and the component library are a package, not part of the app.</p></div>
-    </div>
-    <div class="logos">
-      <span class="logo"><img src="logos/mendix.png" alt="">Mendix 11.16</span>
-      <span class="logo"><img src="logos/nextjs.svg" alt="">Next.js 16</span>
-      <span class="logo"><img src="logos/playwright.svg" alt="">Playwright</span>
-      <span class="logo"><img src="logos/githubactions.svg" alt="">GitHub Actions</span>
+  <!-- 2 Why rebuild -->
+  <section class="slide" aria-label="Why rebuild">
+    <p class="kicker">The business case</p>
+    <h2>Why an organisation moves an app off Mendix</h2>
+    <div class="drivers">
+      <div class="driver"><div class="icon" aria-hidden="true">€</div><h3>Platform cost</h3><p>Licences per user and per app, plus platform hosting, recur every year. An open-source web stack runs on any host.</p></div>
+      <div class="driver"><div class="icon" aria-hidden="true">⇄</div><h3>Lock-in</h3><p>Model format, runtime and deployment belong to one vendor. Code in git can move to any cloud or team.</p></div>
+      <div class="driver"><div class="icon" aria-hidden="true">👥</div><h3>Talent</h3><p>React and TypeScript developers are a large market. Mendix specialists are a small one.</p></div>
+      <div class="driver"><div class="icon" aria-hidden="true">✓</div><h3>Engineering practice</h3><p>Reviewable text diffs, unit tests, typed APIs and standard CI/CD, instead of a binary model file.</p></div>
+      <div class="driver"><div class="icon" aria-hidden="true">✦</div><h3>Product freedom</h3><p>Any UX, any library from npm, any integration, and full control over performance and accessibility.</p></div>
+      <div class="driver"><div class="icon" aria-hidden="true">⟳</div><h3>Own the lifecycle</h3><p>Upgrade on your own schedule, not when the platform moves to a new major version.</p></div>
     </div>
   </section>
 
-  <!-- 3 -->
-  <section class="slide" aria-label="Six steps">
-    <p class="kicker">The approach</p>
-    <h2>Six steps</h2>
+  <!-- 3 Risks -->
+  <section class="slide" aria-label="Risks and answers">
+    <p class="kicker">The business case</p>
+    <h2>What usually breaks it, and how this process answers</h2>
+    <table>
+      <thead><tr><th>Risk of a rebuild</th><th>Answer in this process</th></tr></thead>
+      <tbody>
+        <tr><td class="risk">Behaviour silently changes</td><td>The Mendix app's behaviour is written down as tests before any code: 83 scenarios that both apps must pass.</td></tr>
+        <tr><td class="risk">Users have to relearn the app</td><td>The rebuild wears Mendix's own compiled theme and markup. Screenshots of both are compared on every push.</td></tr>
+        <tr><td class="risk">The rebuild costs too much</td><td>About 80% of the new code is a reusable library, so each next app only adds its own pages and logic.</td></tr>
+        <tr><td class="risk">Big-bang cut-over</td><td>Both apps run side by side, page by page, until the suite is green. Cut-over is a switch, not a leap.</td></tr>
+        <tr><td class="risk">No one can see progress</td><td>Progress is the number of green tests and matching screenshots, visible in CI after every push.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 4 Fit -->
+  <section class="slide fit" aria-label="When it pays off">
+    <p class="kicker">The business case</p>
+    <h2>When a rebuild pays off</h2>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3><span class="tag yes">Strong candidate</span></h3>
+        <ul>
+          <li>A stable app with many users, where licences dominate the cost</li>
+          <li>An app that needs UX, integrations or performance the platform makes hard</li>
+          <li>A team that already builds web apps in React or TypeScript</li>
+          <li>Several similar apps, so the library pays back more than once</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="tag no">Think twice</span></h3>
+        <ul>
+          <li>Apps that change weekly and are built by citizen developers</li>
+          <li>Apps that lean on many Marketplace modules, workflows or offline sync</li>
+          <li>Short-lived apps, where the rebuild outlives the need</li>
+          <li>Teams without people to own a code base afterwards</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 Process -->
+  <section class="slide" aria-label="The rebuild process">
+    <p class="kicker">The rebuild process</p>
+    <h2>Six phases, with the original as the yardstick</h2>
     <div class="flow">
-      <div class="step"><span class="num">1</span><h3>Read the model</h3><p>Pages, widgets, security and texts, straight from the <code>.mpr</code>.</p></div>
-      <div class="step"><span class="num">2</span><h3>Specify in Playwright</h3><p>83 tests, written against what Mendix renders.</p></div>
-      <div class="step"><span class="num">3</span><h3>Compile the theme</h3><p>Atlas, widget CSS and icon fonts, as MxBuild builds them.</p></div>
-      <div class="step"><span class="num">4</span><h3>Build components</h3><p>React components that emit Mendix's markup.</p></div>
-      <div class="step"><span class="num">5</span><h3>Rebuild the app</h3><p>Pages, data, logic and security in Next.js.</p></div>
-      <div class="step"><span class="num">6</span><h3>Verify in CI</h3><p>Both apps up, one suite, screenshots compared.</p></div>
+      <div class="step"><span class="num">1</span><h3>Inventory</h3><p>Read pages, data, logic and security straight from the Mendix project.</p></div>
+      <div class="step"><span class="num">2</span><h3>Capture behaviour</h3><p>Write end-to-end tests against the running Mendix app.</p></div>
+      <div class="step"><span class="num">3</span><h3>Carry over the look</h3><p>Compile Mendix's own theme for the new app.</p></div>
+      <div class="step loop"><span class="num">4</span><h3>Rebuild page by page</h3><p>Pages, data, logic and access rules in code.</p></div>
+      <div class="step loop"><span class="num">5</span><h3>Prove parity</h3><p>Run both apps in CI and compare tests and screenshots.</p></div>
+      <div class="step"><span class="num">6</span><h3>Cut over</h3><p>Move data and users, switch traffic, retire Mendix.</p></div>
     </div>
-    <p class="lead" style="margin-top:36px">Steps 1 to 3 run once per app. Steps 4 to 6 loop page by page until the same suite passes on both apps and the screenshots match.</p>
+    <p class="loop-note"><b>4 ⇄ 5</b> loop per page until the suite is green on both apps and the screenshots match.</p>
   </section>
 
-  <!-- 4 -->
-  <section class="slide" aria-label="Step 1: read the model">
+  <!-- 6 Phase 1 -->
+  <section class="slide" aria-label="Phase 1: inventory">
     <div class="step-head">
-      <div><p class="kicker">Step 1 · Read the model</p><h2>Everything is in the project files</h2></div>
-      <div class="logos">
-        <span class="logo"><img src="logos/mendix.png" alt="">Mendix</span>
-        <span class="logo"><img src="logos/sqlite.svg" alt="">SQLite</span>
-      </div>
+      <div><p class="kicker">Phase 1 · Inventory</p><h2>Know exactly what you are rebuilding</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/mendix.png" alt="">Mendix</span><span class="logo"><img src="logos/sqlite.svg" alt="">SQLite</span></div>
     </div>
-    <div class="grid cols-2">
+    <div class="phase">
       <div class="card">
-        <h3>Sources</h3>
+        <h3>What happens</h3>
         <ul>
-          <li><code>TodoApp.mpr</code>: a SQLite index of model units, stored as BSON in <code>mprcontents/</code></li>
-          <li><code>01-todo.mdl</code>: the app written as an mxcli script</li>
-          <li>Theme SCSS: Atlas Core plus the mxcli “Signal” palette</li>
-          <li>Widget packages (<code>.mpk</code>): Data grid 2 3.4, Combo box 2.5, …</li>
+          <li>Read the project file: the <code>.mpr</code> is a SQLite index of model units</li>
+          <li>List every page, layout and widget with its settings</li>
+          <li>List entities, validation, microflows, roles and access rules</li>
+          <li>Collect the exact texts users see, from the system texts</li>
         </ul>
       </div>
+      <div class="io">
+        <div><b>In</b><p>The Mendix project, no running app needed</p></div>
+        <div><b>Out</b><p>An inventory that sizes the rebuild. Here: 1 module, 2 pages, 1 microflow, 1 entity</p></div>
+        <div class="done"><b>Done when</b><p>Every page and rule has a line in the inventory</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 Phase 2 -->
+  <section class="slide" aria-label="Phase 2: capture behaviour">
+    <div class="step-head">
+      <div><p class="kicker">Phase 2 · Capture behaviour</p><h2>The Mendix app writes the spec</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/playwright.svg" alt="">Playwright</span><span class="logo"><img src="logos/typescript.svg" alt="">TypeScript</span></div>
+    </div>
+    <div class="phase">
       <div class="card">
-        <h3>What came out</h3>
+        <h3>What happens</h3>
         <ul>
-          <li>Layouts, pages and every widget with its properties</li>
-          <li>Navigation, roles, access rules and demo users</li>
-          <li>Widget defaults and DOM, read from the widgets' code</li>
-          <li>Exact texts from the system texts: <span class="mono">“The username or password you entered is incorrect.”</span></li>
+          <li>Write end-to-end scenarios in the users' terms: sign in, add a todo, filter, page through</li>
+          <li>Find elements by what Mendix renders (<code>mx-name-*</code>), so the same test drives both apps</li>
+          <li>Run them against Mendix until they pass</li>
+          <li>Add screenshots of every key screen</li>
         </ul>
       </div>
+      <div class="io">
+        <div><b>In</b><p>The inventory and the running Mendix app</p></div>
+        <div><b>Out</b><p>Acceptance criteria as code. Here: 83 tests, 16 of them screenshots</p></div>
+        <div class="done"><b>Done when</b><p>The suite is green on Mendix</p></div>
+      </div>
     </div>
   </section>
 
-  <!-- 5 -->
-  <section class="slide" aria-label="Step 2: specify in Playwright">
+  <!-- 8 Phase 3 -->
+  <section class="slide" aria-label="Phase 3: carry over the look">
     <div class="step-head">
-      <div><p class="kicker">Step 2 · Specify in Playwright</p><h2>One suite, two targets</h2></div>
-      <div class="logos">
-        <span class="logo"><img src="logos/playwright.svg" alt="">Playwright</span>
-        <span class="logo"><img src="logos/typescript.svg" alt="">TypeScript</span>
-      </div>
+      <div><p class="kicker">Phase 3 · Carry over the look</p><h2>No retraining: it looks the same</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/sass.svg" alt="">Sass</span><span class="logo"><img src="logos/bootstrap.svg" alt="">Bootstrap (Atlas)</span></div>
     </div>
-    <div class="grid cols-2">
-      <div>
-        <pre><span class="tk-c">// playwright.config.ts</span>
-projects: [
-  { name: <span class="tk-s">"mendix"</span>, use: { baseURL: <span class="tk-s">":8080"</span> } },
-  { name: <span class="tk-s">"nextjs"</span>, use: { baseURL: <span class="tk-s">":3000"</span> } }
-]
-
-<span class="tk-c">// selectors are what Mendix renders</span>
-page.locator(<span class="tk-s">".mx-name-dgTodos"</span>)
-grid.locator(<span class="tk-s">".widget-datagrid-grid-body &gt; .tr"</span>)
-page.locator(<span class="tk-s">"#loginButton"</span>)</pre>
-      </div>
+    <div class="phase">
       <div class="card">
-        <h3>83 tests in 10 files</h3>
+        <h3>What happens</h3>
         <ul>
-          <li>Sign-in, session, anonymous redirect</li>
-          <li>Create, edit and validation in the popup</li>
-          <li>Done / undo, delete</li>
-          <li>Grid: sorting, text, drop-down and date filters, paging, column hiding and resizing</li>
-          <li>Each user sees only their own todos</li>
-          <li><b>16 screenshots</b>: baselines from Mendix, 1% tolerance</li>
+          <li>Compile the project's own theme exactly as Mendix builds it</li>
+          <li>Take the widgets' CSS and the icon fonts from the project</li>
+          <li>Reuse the theme's own login page</li>
         </ul>
+        <pre style="margin-top:16px"><span class="tk-t">$</span> npx atlas-theme --project ../mendix --out public</pre>
+      </div>
+      <div class="io">
+        <div><b>In</b><p>The Mendix theme, widget packages and icon collections</p></div>
+        <div><b>Out</b><p>The same CSS the Mendix app serves, regenerated on every build</p></div>
+        <div class="done"><b>Done when</b><p>The new app builds with the original's styles</p></div>
       </div>
     </div>
   </section>
 
-  <!-- 6 -->
-  <section class="slide" aria-label="Step 3: compile the theme">
+  <!-- 9 Phase 4 -->
+  <section class="slide" aria-label="Phase 4: rebuild page by page">
     <div class="step-head">
-      <div><p class="kicker">Step 3 · Compile the theme</p><h2>Same CSS, so the same pixels</h2></div>
-      <div class="logos">
-        <span class="logo"><img src="logos/sass.svg" alt="">Sass</span>
-        <span class="logo"><img src="logos/bootstrap.svg" alt="">Bootstrap (Atlas)</span>
-        <span class="logo"><img src="logos/nodejs.svg" alt="">Node.js</span>
-      </div>
+      <div><p class="kicker">Phase 4 · Rebuild page by page</p><h2>Model element by model element</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/nextjs.svg" alt="">Next.js</span><span class="logo"><img src="logos/react.svg" alt="">React</span><span class="logo"><img src="logos/nodejs.svg" alt="">Node.js</span></div>
     </div>
-    <div class="grid cols-2">
-      <div>
-        <pre><span class="tk-t">$</span> npx atlas-theme --project ../mendix --out public
-atlas-theme: 5 theme sources, 7 widget packages,
-             3 icon collections -&gt; public</pre>
-        <p class="muted" style="margin-top:18px">Runs before every <code>next dev</code> and <code>next build</code>, so the rebuild always wears the current Mendix theme.</p>
-      </div>
-      <div class="card">
-        <h3>What it writes</h3>
-        <ul>
-          <li><code>theme.compiled.css</code>: dart-sass, in MxBuild's module order</li>
-          <li><code>widgets.css</code>: the CSS inside the <code>.mpk</code> packages</li>
-          <li><code>mxicons/</code>: icon fonts and classes, read from the <code>.mpr</code></li>
-          <li><code>login.html</code>: the theme's own page, placeholders filled in</li>
-          <li>Fonts, images and public resources, where Mendix serves them</li>
-        </ul>
+    <div class="phase">
+      <table>
+        <thead><tr><th>Mendix</th><th>Rebuild</th></tr></thead>
+        <tbody>
+          <tr><td>Page and layout</td><td>Route composed from library components</td></tr>
+          <tr><td>Entity and validation</td><td>Database table and server checks</td></tr>
+          <tr><td>Microflow</td><td>Server function behind an API call</td></tr>
+          <tr><td>Access rule</td><td>Every query scoped to the signed-in user</td></tr>
+          <tr><td>Data grid data source</td><td>Paged, sorted, filtered query</td></tr>
+          <tr><td>Demo users and login page</td><td>The same accounts and login page</td></tr>
+        </tbody>
+      </table>
+      <div class="io">
+        <div><b>In</b><p>One page from the inventory and its tests</p></div>
+        <div><b>Out</b><p>The page in code, built from the component library</p></div>
+        <div class="done"><b>Done when</b><p>That page's tests pass on the rebuild</p></div>
       </div>
     </div>
   </section>
 
-  <!-- 7 -->
-  <section class="slide" aria-label="Step 4: component library">
+  <!-- 10 Phase 5 -->
+  <section class="slide" aria-label="Phase 5: prove parity">
     <div class="step-head">
-      <div><p class="kicker">Step 4 · Build components</p><h2>@flock-community/atlas-ui</h2></div>
-      <div class="logos">
-        <span class="logo"><img src="logos/react.svg" alt="">React</span>
-        <span class="logo"><img src="logos/typescript.svg" alt="">TypeScript</span>
-        <span class="logo"><img src="logos/datefns.svg" alt="">date-fns</span>
-      </div>
-    </div>
-    <table>
-      <thead><tr><th>Mendix widget</th><th>Component</th></tr></thead>
-      <tbody>
-        <tr><td>Scroll container layouts, layout grid</td><td><code>ScrollContainer</code>, <code>LayoutGrid</code>, <code>Row</code>, <code>Column</code></td></tr>
-        <tr><td>Text, button, menu bar</td><td><code>DynamicText</code>, <code>ActionButton</code>, <code>MenuBar</code></td></tr>
-        <tr><td>Data view, inputs, date picker, popup</td><td><code>DataView</code>, <code>TextBox</code>, <code>DatePicker</code>, <code>PopupWindow</code>, …</td></tr>
-        <tr><td>Data grid 2 and its filters</td><td><code>Datagrid</code>, <code>TextFilter</code>, <code>DropdownFilter</code>, <code>DateFilter</code></td></tr>
-        <tr><td>Combo box, language selector</td><td><code>Combobox</code>, <code>LanguageSelector</code></td></tr>
-        <tr><td>List data source and XPath-style filters</td><td><code>useListValue</code>, <code>conditionToSql</code></td></tr>
-      </tbody>
-    </table>
-    <p class="muted" style="margin-top:16px;font-size:17px">The same libraries as the Mendix widgets: <span class="chip">downshift</span> <span class="chip">Floating UI</span> <span class="chip">react-datepicker</span>, so keyboard and ARIA behaviour match too.</p>
-  </section>
-
-  <!-- 8 -->
-  <section class="slide" aria-label="A page in code">
-    <p class="kicker">Step 4 · In code</p>
-    <h2>A page reads like its Mendix model</h2>
-    <div class="grid cols-2" style="align-items:start">
-      <pre><span class="tk-k">&lt;LayoutGrid</span> <span class="tk-a">name</span>=<span class="tk-s">"mainGrid"</span><span class="tk-k">&gt;</span>
-  <span class="tk-k">&lt;Row&gt;&lt;Column</span> <span class="tk-a">desktop</span>={12}<span class="tk-k">&gt;</span>
-    <span class="tk-k">&lt;DynamicText</span> <span class="tk-a">name</span>=<span class="tk-s">"heading"</span> <span class="tk-a">renderMode</span>=<span class="tk-s">"h2"</span><span class="tk-k">&gt;</span>
-      My todos
-    <span class="tk-k">&lt;/DynamicText&gt;</span>
-    <span class="tk-k">&lt;ActionButton</span> <span class="tk-a">name</span>=<span class="tk-s">"btnNew"</span>
-      <span class="tk-a">caption</span>=<span class="tk-s">"New todo"</span> <span class="tk-a">buttonStyle</span>=<span class="tk-s">"primary"</span>
-      <span class="tk-a">onClick</span>={newTodo} <span class="tk-k">/&gt;</span>
-    <span class="tk-k">&lt;Datagrid</span> <span class="tk-a">name</span>=<span class="tk-s">"dgTodos"</span>
-      <span class="tk-a">className</span>=<span class="tk-s">"table-hover table-striped"</span>
-      <span class="tk-a">datasource</span>={todos} <span class="tk-a">columns</span>={columns} <span class="tk-k">/&gt;</span>
-  <span class="tk-k">&lt;/Column&gt;&lt;/Row&gt;</span>
-<span class="tk-k">&lt;/LayoutGrid&gt;</span></pre>
-      <div class="card">
-        <h3>Renders what Mendix renders</h3>
-        <pre style="font-size:13.5px;margin:6px 0 14px">&lt;div class="mx-layoutgrid mx-layoutgrid-fluid
-            mx-name-mainGrid"&gt;
-  &lt;h2 class="mx-name-heading mx-text"&gt;…
-  &lt;button class="btn mx-button
-               mx-name-btnNew btn-primary"&gt;…
-  &lt;div class="mx-name-dgTodos table-hover
-            table-striped widget-datagrid"&gt;…</pre>
-        <p class="muted">The <code>name</code> becomes the <code>mx-name-*</code> class: Atlas styles it, and the e2e suite finds it in both apps.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 9 -->
-  <section class="slide" aria-label="Step 5: rebuild the app">
-    <div class="step-head">
-      <div><p class="kicker">Step 5 · Rebuild the app</p><h2>Model element by model element</h2></div>
-      <div class="logos">
-        <span class="logo"><img src="logos/nextjs.svg" alt="">Next.js</span>
-        <span class="logo"><img src="logos/nodejs.svg" alt="">Node.js 22</span>
-        <span class="logo"><img src="logos/sqlite.svg" alt="">SQLite</span>
-      </div>
-    </div>
-    <table>
-      <thead><tr><th>Mendix</th><th>Next.js rebuild</th></tr></thead>
-      <tbody>
-        <tr><td>Page <code>TodoItem_Overview</code>, URL <code>/p/todos</code></td><td>App Router route <code>/p/todos</code> + a client page from atlas-ui</td></tr>
-        <tr><td>Entity <code>TodoItem</code>, enumeration, validation rules</td><td><code>node:sqlite</code> table, shared model module, server-side validation</td></tr>
-        <tr><td>Access rule <code>System.owner = [%CurrentUser%]</code></td><td>Every query scoped to the session's user</td></tr>
-        <tr><td>Microflow <code>ACT_TodoItem_ToggleDone</code></td><td><code>POST /api/todos/:id/toggle</code></td></tr>
-        <tr><td>Data grid data source (sort, filter, page)</td><td><code>GET /api/todos?q=…</code>, filters compiled to bound SQL</td></tr>
-        <tr><td>Demo users, <code>login.html</code>, <code>XASSESSIONID</code></td><td>bcrypt users, the same login page posting to <code>xas/</code>, same cookie</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- 10 -->
-  <section class="slide" aria-label="Step 6: verify in CI">
-    <div class="step-head">
-      <div><p class="kicker">Step 6 · Verify in CI</p><h2>Both apps, one suite</h2></div>
-      <div class="logos">
-        <span class="logo"><img src="logos/githubactions.svg" alt="">GitHub Actions</span>
-        <span class="logo"><img src="logos/temurin.svg" alt="">Temurin JDK 21</span>
-        <span class="logo"><img src="logos/playwright.svg" alt="">Playwright</span>
-      </div>
+      <div><p class="kicker">Phase 5 · Prove parity</p><h2>Both apps, one suite, every push</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/githubactions.svg" alt="">GitHub Actions</span><span class="logo"><img src="logos/playwright.svg" alt="">Playwright</span></div>
     </div>
     <div class="pipeline">
-      <div class="stage"><h3>Build</h3><p>Next.js: type check, unit tests, production build.</p></div>
+      <div class="stage"><h3>Start both apps</h3><p>The rebuild, and Mendix started from the same commit.</p></div>
       <div class="link" aria-hidden="true">→</div>
-      <div class="stage both">
-        <div><h3>Start Next.js</h3><p>Port 3000</p></div>
-        <div><h3>Start Mendix</h3><p>mxcli, HSQLDB, port 8080. MxBuild and runtime cached.</p></div>
-      </div>
+      <div class="stage"><h3>Run the suite on Mendix</h3><p>Its screenshots become the baselines.</p></div>
       <div class="link" aria-hidden="true">→</div>
-      <div class="stage"><h3>e2e on Mendix</h3><p>83 tests. Its screenshots become the baselines.</p></div>
-      <div class="link" aria-hidden="true">→</div>
-      <div class="stage key"><h3>e2e on Next.js</h3><p>Same 83 tests, screenshots compared with Mendix's.</p></div>
+      <div class="stage key"><h3>Run it on the rebuild</h3><p>Same tests, screenshots compared with Mendix's, 1% tolerance.</p></div>
     </div>
-    <p class="muted" style="margin-top:26px">Reports, Mendix baselines and both apps' logs are kept as artifacts. A Mendix failure doesn't stop the rebuild's run, and the job fails if either app fails.</p>
+    <div class="io" style="grid-template-columns: repeat(3, 1fr); margin-top: 22px;">
+      <div><b>In</b><p>Every push to the repository</p></div>
+      <div><b>Out</b><p>Reports and screenshot diffs, kept per run</p></div>
+      <div class="done"><b>Done when</b><p>All tests pass on both apps, and no screenshot differs</p></div>
+    </div>
   </section>
 
-  <!-- 11 -->
-  <section class="slide" aria-label="Tech stack">
+  <!-- 11 Phase 6 -->
+  <section class="slide" aria-label="Phase 6: cut over">
+    <div class="step-head">
+      <div><p class="kicker">Phase 6 · Cut over</p><h2>A switch, not a leap</h2></div>
+    </div>
+    <div class="phase">
+      <div class="card">
+        <h3>What happens</h3>
+        <ul>
+          <li>Copy the data from the Mendix database into the new schema, in a rehearsed script</li>
+          <li>Move user accounts as they are: both apps hash passwords with BCrypt</li>
+          <li>Switch traffic, and keep Mendix read-only for a fallback window</li>
+          <li>Retire Mendix, and keep its last screenshots as the visual baseline</li>
+        </ul>
+      </div>
+      <div class="io">
+        <div><b>In</b><p>A rebuild with green tests and matching screenshots</p></div>
+        <div><b>Out</b><p>Users on the new app, and one licence fewer</p></div>
+        <div class="done"><b>Done when</b><p>The fallback window closes without a rollback</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 Numbers -->
+  <section class="slide" aria-label="This app in numbers">
+    <p class="kicker">The TodoApp in numbers</p>
+    <h2>Most of the new code is reusable</h2>
+    <div class="card" style="margin-bottom:20px">
+      <div class="split" role="img" aria-label="About 3,400 lines of reusable library and 840 lines of app code">
+        <div class="lib" style="width:80%">Reusable library · ~3,400 lines</div>
+        <div class="app" style="width:20%">App · ~840</div>
+      </div>
+      <p class="legend">New code, excluding tests. The app-specific part is its pages, server logic and model; everything else carries over to the next app.</p>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>83</b><span>end-to-end tests as the spec, 16 of them screenshot comparisons</span></div>
+      <div class="stat"><b>67 / 67</b><span>functional tests green on the rebuild</span></div>
+      <div class="stat"><b>~2 min</b><span>for CI to start the Mendix app next to the rebuild</span></div>
+    </div>
+  </section>
+
+  <!-- 13 Portfolio -->
+  <section class="slide" aria-label="Scaling to a portfolio">
+    <p class="kicker">Scaling the business case</p>
+    <h2>The first app pays for the toolkit, the next ones reuse it</h2>
+    <div class="card">
+      <div class="apps" role="img" aria-label="Illustration: the first app builds the library, later apps reuse it and add a few widgets">
+        <div class="app-row"><span>App 1</span><div class="bar"><div class="lib" style="width:64%">Toolkit: theme, components, test setup, CI</div><div class="app" style="width:16%">App</div></div></div>
+        <div class="app-row"><span>App 2</span><div class="bar"><div class="reuse" style="width:64%">Reused</div><div class="new" style="width:8%">+widgets</div><div class="app" style="width:16%">App</div></div></div>
+        <div class="app-row"><span>App 3…n</span><div class="bar"><div class="reuse" style="width:64%">Reused</div><div class="new" style="width:3%"></div><div class="app" style="width:16%">App</div></div></div>
+      </div>
+      <p class="legend" style="margin-top:14px">Illustrative. The toolkit grows only by the widgets a new app uses for the first time, such as a gallery or tab container.</p>
+    </div>
+    <div class="grid cols-3" style="margin-top:20px">
+      <div class="card"><h3>Reusable as is</h3><p class="muted">Theme compiler, core widgets, Data grid with filters, combo box, data source, test and CI setup</p></div>
+      <div class="card"><h3>Per app</h3><p class="muted">Pages, logic and access rules, the data migration, and the app's own tests</p></div>
+      <div class="card"><h3>Measured, not estimated</h3><p class="muted">Each app's progress is its green tests and matching screenshots</p></div>
+    </div>
+  </section>
+
+  <!-- 14 Tech -->
+  <section class="slide" aria-label="Tech used">
     <p class="kicker">Tech used</p>
     <h2>The stack</h2>
     <div class="wall">
       <div class="card">
         <h3>Source</h3>
-        <div class="tech"><img src="logos/mendix.png" alt=""><div>Mendix 11.16<small>Atlas Core 4, Data Widgets 3</small></div></div>
-        <div class="tech"><span class="mark">mx</span><div>mxcli<small>MDL scripts, local runs</small></div></div>
+        <div class="tech"><img src="logos/mendix.png" alt=""><div>Mendix 11<small>Atlas UI, Data Widgets</small></div></div>
+        <div class="tech"><span class="mark">mx</span><div>mxcli<small>scripts and local runs</small></div></div>
         <div class="tech"><img src="logos/sqlite.svg" alt=""><div>.mpr format<small>SQLite + BSON units</small></div></div>
       </div>
       <div class="card">
         <h3>Rebuild</h3>
-        <div class="tech"><img src="logos/nextjs.svg" alt=""><div>Next.js 16<small>App Router, route handlers</small></div></div>
-        <div class="tech"><img src="logos/react.svg" alt=""><div>React 19</div></div>
+        <div class="tech"><img src="logos/nextjs.svg" alt=""><div>Next.js<small>pages and API routes</small></div></div>
+        <div class="tech"><img src="logos/react.svg" alt=""><div>React</div></div>
         <div class="tech"><img src="logos/typescript.svg" alt=""><div>TypeScript</div></div>
-        <div class="tech"><img src="logos/nodejs.svg" alt=""><div>Node.js 22<small>node:sqlite, bcrypt</small></div></div>
+        <div class="tech"><img src="logos/nodejs.svg" alt=""><div>Node.js<small>SQLite, BCrypt</small></div></div>
       </div>
       <div class="card">
         <h3>Look &amp; feel</h3>
-        <div class="tech"><img src="logos/sass.svg" alt=""><div>Sass<small>Atlas compiled with dart-sass</small></div></div>
+        <div class="tech"><img src="logos/sass.svg" alt=""><div>Sass<small>Mendix theme compiled</small></div></div>
         <div class="tech"><img src="logos/bootstrap.svg" alt=""><div>Bootstrap<small>Atlas's base layer</small></div></div>
-        <div class="tech"><img src="logos/datefns.svg" alt=""><div>date-fns<small>Mendix date patterns</small></div></div>
-        <div class="tech"><span class="mark">UI</span><div>downshift · Floating UI<small>react-datepicker</small></div></div>
+        <div class="tech"><img src="logos/datefns.svg" alt=""><div>date-fns<small>Mendix date formats</small></div></div>
       </div>
       <div class="card">
         <h3>Test &amp; ship</h3>
-        <div class="tech"><img src="logos/playwright.svg" alt=""><div>Playwright<small>e2e and screenshots</small></div></div>
+        <div class="tech"><img src="logos/playwright.svg" alt=""><div>Playwright<small>tests and screenshots</small></div></div>
         <div class="tech"><img src="logos/githubactions.svg" alt=""><div>GitHub Actions<small>both apps per push</small></div></div>
-        <div class="tech"><img src="logos/temurin.svg" alt=""><div>Temurin JDK 21<small>Mendix runtime</small></div></div>
         <div class="tech"><img src="logos/github.svg" alt=""><div>GitHub Pages<small>this deck</small></div></div>
       </div>
     </div>
   </section>
 
-  <!-- 12 -->
-  <section class="slide" aria-label="Where it stands">
-    <p class="kicker">Where it stands</p>
-    <h2>Green on the rebuild, now compared with Mendix</h2>
-    <div class="stats">
-      <div class="stat"><b>67 / 67</b><span>functional e2e tests pass on the rebuild</span></div>
-      <div class="stat"><b>16</b><span>unit tests: filter-to-SQL, validation, per-user access</span></div>
-      <div class="stat"><b>~2 min</b><span>for Mendix to start in CI, from download to serving</span></div>
-      <div class="stat"><b>16</b><span>screenshots compared with Mendix on every push</span></div>
-    </div>
-    <div class="grid cols-2" style="margin-top:26px">
-      <div class="card">
-        <h3>Exact by construction</h3>
-        <p class="muted">The theme CSS, the pluggable widgets' markup (from their code), system texts, enumeration and validation rules.</p>
-      </div>
-      <div class="card">
-        <h3>Inferred, checked by CI</h3>
-        <p class="muted">Core client markup (date picker, popup size, menu list), delete without confirmation, date-time format, empty-date sort order.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 13 -->
-  <section class="slide" aria-label="Next migration">
-    <p class="kicker">The next migration</p>
-    <h2>A playbook that carries over</h2>
-    <div class="grid cols-2">
-      <div class="card">
-        <ul>
-          <li>Run <code>atlas-theme</code> on the Mendix project</li>
-          <li>Write the e2e suite against Mendix first, on <code>mx-name-*</code> selectors</li>
-          <li>Compose the pages from <code>atlas-ui</code>; port microflows and access rules to the server</li>
-          <li>Run both apps in CI and work through the screenshot diffs</li>
-          <li>Retire Mendix: commit the baselines and the theme output</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>Reusable as is</h3>
-        <ul>
-          <li><code>atlas-theme</code> CLI (MPR v1 and v2 projects)</li>
-          <li>Core widgets, Data grid 2, filters, Combo box</li>
-          <li><code>useListValue</code> + <code>conditionToSql</code></li>
-          <li>The two-target Playwright setup and CI workflow</li>
-        </ul>
-        <h3 style="margin-top:14px">To grow per app</h3>
-        <p class="muted">More widgets (gallery, tab container, …) as the next app needs them.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 14 -->
-  <section class="slide dark" aria-label="Thank you">
+  <!-- 15 Close -->
+  <section class="slide dark" aria-label="Questions">
     <p class="kicker">Thank you</p>
     <h1>Questions?</h1>
     <p class="title-sub">Code, tests and docs: <span class="mono">flock-community/mendix-app</span>, in <span class="mono">mendix/</span>, <span class="mono">e2e/</span> and <span class="mono">nextjs/</span>.</p>
-    <p class="muted" style="margin-top:auto;font-size:13px">Logos: Simple Icons (CC0), the Playwright logo from its package (Apache-2.0), the Mendix logo from the project's theme. Trademarks belong to their owners. Type: IBM Plex (SIL OFL).</p>
+    <p class="muted" style="margin-top:auto;font-size:13px;color:#98a3b3">Logos: Simple Icons (CC0), the Playwright logo from its package (Apache-2.0), the Mendix logo from the project's theme. Trademarks belong to their owners. Type: IBM Plex (SIL OFL).</p>
   </section>
 
-  <div class="chrome" aria-hidden="true"><span>Mendix → Next.js</span></div>
+  <div class="chrome" aria-hidden="true"><span>Moving a Mendix app to code</span></div>
   <div class="progress" id="progress" aria-hidden="true"></div>
 </main>
 </div>
