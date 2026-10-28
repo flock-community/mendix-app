@@ -6,19 +6,24 @@ mdl 1;
 
 create module Todo;
 
+/** How urgent a todo is. Shown and filtered on the overview page. */
 create or modify enumeration Todo.Priority (
   Low 'Low',
   Medium 'Medium',
   High 'High'
 );
 
-/** A single thing to do. */
+/**
+ * A single thing to do. Each todo belongs to the user who created it
+ * (System.owner); the access rule below shows users only their own.
+ */
 create or modify persistent entity Todo.TodoItem (
   Title: String(200) not null error message 'Title is required',
   Description: String(2000),
   IsDone: Boolean default false,
   DueDate: DateTime,
-  Priority: Enumeration(Todo.Priority) default Medium
+  Priority: Enumeration(Todo.Priority) default Medium,
+  owner: AutoOwner
 );
 
 /**
@@ -36,6 +41,7 @@ begin
   return true;
 end;
 
+/** Popup form to create or edit one todo. Opened from the overview's New and Edit buttons. */
 create or modify page Todo.TodoItem_NewEdit
 (
   params: ( $TodoItem: Todo.TodoItem ),
@@ -63,10 +69,12 @@ create or modify page Todo.TodoItem_NewEdit
   }
 };
 
+/** The home page: the signed-in user's todos, open ones first, with a filter per column. */
 create or modify page Todo.TodoItem_Overview
 (
   title: 'Todos',
-  layout: Atlas_Core.Atlas_Default
+  layout: MyFirstModule.App_Default,
+  url: 'todos'
 )
 {
   layoutgrid mainGrid {
@@ -82,7 +90,7 @@ create or modify page Todo.TodoItem_Overview
           datasource: database Todo.TodoItem sort by IsDone asc, DueDate asc,
           designproperties: ('Hover': on, 'Striped': on)
         ) {
-          column (attribute: IsDone, caption: 'Done') {
+          column (attribute: IsDone, caption: 'Done', width: autoFit) {
             checkbox cbDone (attribute: IsDone, editable: Never, readonlystyle: Control)
             dropdownfilter fDone
           }
@@ -95,7 +103,7 @@ create or modify page Todo.TodoItem_Overview
           column (attribute: DueDate, caption: 'Due date') {
             datefilter fDueDate
           }
-          column (caption: 'Actions') {
+          column (caption: 'Actions', width: autoFit) {
             actionbutton btnToggle (
               caption: 'Done / undo',
               action: call microflow Todo.ACT_TodoItem_ToggleDone(TodoItem = $currentObject)
@@ -112,10 +120,15 @@ create or modify page Todo.TodoItem_Overview
   }
 };
 
--- Security: one module role that can do everything with todos.
-create or modify module role Todo.User description 'Creates, edits and completes todos';
+-- Security: the blank app ships with security off, which ignores every grant
+-- below and has no signed-in user to own a todo. Production enforces them.
+alter app security ( SecurityLevel: production );
 
-grant create, delete, read *, write * on entity Todo.TodoItem to Todo.User;
+-- One module role that can do everything with its own todos.
+create or modify module role Todo.User description 'Creates, edits and completes their own todos';
+
+grant create, delete, read *, write * on entity Todo.TodoItem to Todo.User
+  where [System.owner = '[%CurrentUser%]'];
 grant view on page Todo.TodoItem_Overview to Todo.User;
 grant view on page Todo.TodoItem_NewEdit to Todo.User;
 grant execute on microflow Todo.ACT_TodoItem_ToggleDone to Todo.User;
@@ -123,10 +136,11 @@ grant execute on microflow Todo.ACT_TodoItem_ToggleDone to Todo.User;
 alter user role User add module roles (Todo.User);
 alter user role Administrator add module roles (Todo.User);
 
--- Navigation: the todo list is the home page and has a menu item.
-alter navigation Responsive {
-  set home page Todo.TodoItem_Overview;
-  insert {
-    menu item 'Todos' ( OnClick: show page Todo.TodoItem_Overview, Icon: Atlas_Core.Atlas."list-bullets" )
-  }
+-- Navigation: the todo list is the home page and the only menu item. This
+-- replaces the template's menu (its 'Home' item opened the blank-app welcome
+-- page); stating the whole menu keeps a second exec from adding the item twice.
+create or modify navigation Responsive
+  home page Todo.TodoItem_Overview
+{
+  menu item 'Todos' ( OnClick: show page Todo.TodoItem_Overview, Icon: Atlas_Core.Atlas."list-bullets" )
 };
