@@ -1,0 +1,32 @@
+{
+  "name": "todoapp-nextjs",
+  "private": true,
+  "description": "Next.js rebuild of the Mendix TodoApp",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "theme": "atlas-theme --project ../mendix --out public",
+    "predev": "npm run theme",
+    "dev": "next dev",
+    "prebuild": "npm run theme",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --import ./test/setup.ts --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@flock-community/atlas-ui": "*",
+    "bcryptjs": "^3.0.2",
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.0"
+  }
+}

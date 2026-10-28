@@ -1,0 +1,8 @@
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+# Generated from ../mendix by `npm run theme` (atlas-theme) on every dev/build.
+/public/
+# The app's SQLite database.
+/data/

@@ -1,0 +1,17 @@
+{
+  "name": "todoapp-e2e",
+  "private": true,
+  "description": "End-to-end tests for the TodoApp, runnable against the Mendix original and the Next.js rebuild",
+  "scripts": {
+    "test": "playwright test",
+    "test:mendix": "playwright test --project=mendix",
+    "test:nextjs": "playwright test --project=nextjs",
+    "baseline:mendix": "playwright test --project=mendix --grep @visual --update-snapshots",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
