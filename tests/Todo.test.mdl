@@ -1,0 +1,18 @@
+mdl 1;
+-- Tests for Todo.ACT_TodoItem_ToggleDone. Each test's writes are rolled back.
+
+/**
+ * @test Toggling an open todo marks it done
+ * @expect $TodoItem/IsDone = true
+ */
+$TodoItem = create Todo.TodoItem (Title = 'Buy milk', IsDone = false);
+$Toggled = call microflow Todo.ACT_TodoItem_ToggleDone(TodoItem = $TodoItem);
+/
+
+/**
+ * @test Toggling a done todo reopens it
+ * @expect $TodoItem/IsDone = false
+ */
+$TodoItem = create Todo.TodoItem (Title = 'Walk the dog', IsDone = true);
+$Toggled = call microflow Todo.ACT_TodoItem_ToggleDone(TodoItem = $TodoItem);
+/

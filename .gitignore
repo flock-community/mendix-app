@@ -1,0 +1,2 @@
+# The mxcli binary (~100 MB) is downloaded per session, never committed.
+/mxcli

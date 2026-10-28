@@ -1,0 +1,132 @@
+mdl 1;
+
+-- Todo app: one module, one entity, an overview page with a popup edit form,
+-- and a microflow that toggles a todo between done and not done.
+-- Re-runnable: a second exec must report everything unchanged.
+
+create module Todo;
+
+create or modify enumeration Todo.Priority (
+  Low 'Low',
+  Medium 'Medium',
+  High 'High'
+);
+
+/** A single thing to do. */
+create or modify persistent entity Todo.TodoItem (
+  Title: String(200) not null error message 'Title is required',
+  Description: String(2000),
+  IsDone: Boolean default false,
+  DueDate: DateTime,
+  Priority: Enumeration(Todo.Priority) default Medium
+);
+
+/**
+ * Flip a todo between done and not done, and save it.
+ *
+ * @param $TodoItem The todo to toggle
+ * @returns true
+ */
+create or modify microflow Todo.ACT_TodoItem_ToggleDone (
+  $TodoItem: Todo.TodoItem
+)
+returns boolean
+begin
+  change $TodoItem (IsDone = not($TodoItem/IsDone)) commit refresh;
+  return true;
+end;
+
+create or modify page Todo.TodoItem_NewEdit
+(
+  params: ( $TodoItem: Todo.TodoItem ),
+  title: 'Edit todo',
+  layout: Atlas_Core.PopupLayout
+)
+{
+  layoutgrid formGrid {
+    row {
+      column (desktopwidth: autofill) {
+        dataview dvTodoItem (datasource: $TodoItem) {
+          textbox txtTitle (label: 'Title', attribute: Title)
+          textarea txtDescription (label: 'Description', attribute: Description, NumberOfLines: 3)
+          datepicker dpDueDate (label: 'Due date', attribute: DueDate)
+          combobox cbPriority (label: 'Priority', attribute: Priority)
+          checkbox cbIsDone (label: 'Done', attribute: IsDone)
+
+          footer {
+            actionbutton btnSave (caption: 'Save', action: save changes close page, buttonstyle: primary)
+            actionbutton btnCancel (caption: 'Cancel', action: cancel changes close page)
+          }
+        }
+      }
+    }
+  }
+};
+
+create or modify page Todo.TodoItem_Overview
+(
+  title: 'Todos',
+  layout: Atlas_Core.Atlas_Default
+)
+{
+  layoutgrid mainGrid {
+    row {
+      column (desktopwidth: 12) {
+        dynamictext heading (content: 'My todos', rendermode: H2)
+        actionbutton btnNew (
+          caption: 'New todo',
+          action: create object Todo.TodoItem then show page Todo.TodoItem_NewEdit,
+          buttonstyle: primary
+        )
+        datagrid dgTodos (
+          datasource: database Todo.TodoItem sort by IsDone asc, DueDate asc,
+          designproperties: ('Hover': on, 'Striped': on)
+        ) {
+          column (attribute: IsDone, caption: 'Done') {
+            checkbox cbDone (attribute: IsDone, editable: Never, readonlystyle: Control)
+            dropdownfilter fDone
+          }
+          column (attribute: Title, caption: 'Title') {
+            textfilter fTitle
+          }
+          column (attribute: Priority, caption: 'Priority') {
+            dropdownfilter fPriority
+          }
+          column (attribute: DueDate, caption: 'Due date') {
+            datefilter fDueDate
+          }
+          column (caption: 'Actions') {
+            actionbutton btnToggle (
+              caption: 'Done / undo',
+              action: call microflow Todo.ACT_TodoItem_ToggleDone(TodoItem = $currentObject)
+            )
+            actionbutton btnEdit (
+              caption: 'Edit',
+              action: show page Todo.TodoItem_NewEdit(TodoItem = $currentObject)
+            )
+            actionbutton btnDelete (caption: 'Delete', action: delete, buttonstyle: danger)
+          }
+        }
+      }
+    }
+  }
+};
+
+-- Security: one module role that can do everything with todos.
+create or modify module role Todo.User description 'Creates, edits and completes todos';
+
+grant create, delete, read *, write * on entity Todo.TodoItem to Todo.User;
+grant view on page Todo.TodoItem_Overview to Todo.User;
+grant view on page Todo.TodoItem_NewEdit to Todo.User;
+grant execute on microflow Todo.ACT_TodoItem_ToggleDone to Todo.User;
+
+alter user role User add module roles (Todo.User);
+alter user role Administrator add module roles (Todo.User);
+
+-- Navigation: the todo list is the home page and has a menu item.
+alter navigation Responsive {
+  set home page Todo.TodoItem_Overview;
+  insert {
+    menu item 'Todos' ( OnClick: show page Todo.TodoItem_Overview, Icon: Atlas_Core.Atlas."list-bullets" )
+  }
+};
