@@ -117,8 +117,9 @@ starts the Mendix app in CI and runs the suite against both apps, comparing the
 rebuild's screenshots with Mendix's (`npm run baseline:mendix`, then
 `npm run test:nextjs` in `../e2e`, does the same locally).
 
-The first run against a running Mendix app (in CI) corrected these guesses.
-The DOM came from the Playwright traces of that run:
+The first runs against a running Mendix app (in CI) corrected these guesses.
+The DOM came from the Playwright traces of those runs, and now comes from the
+`.html` each visual test writes next to its screenshot:
 
 | What | Guessed | Mendix renders |
 |------|---------|----------------|
@@ -132,13 +133,17 @@ The DOM came from the Playwright traces of that run:
 | Buttons | `disabled` attribute | `aria-disabled` and `data-disabled`, `title=""`, `data-button-id="p.<page>.<name>"` |
 | Stylesheets | Theme, then widgets | Widgets (`dist/widgets.css`), then the theme |
 | Demo user switcher | "Demo users", administrator first | "Select user" with Mendix's description, demo_user first |
+| Form labels | Above the inputs (`form-group no-columns`) | A horizontal data view form: `form-horizontal`, labels `col-sm-3`, inputs and validation in `col-sm-9` |
+| Popup window | 600px inline, centred, underlay first at z-index 1000 | No inline width (the theme's 600px), at 35% of the free height, z-index 102 with the underlay after it; the popup layout is a sidebar scroll container |
+| Text inputs | Pass the value on per key stroke | Pass it on when the user leaves the field, so a validation message stays until then |
+| Text area, date input | Five rows; no placeholder, glyphicon button | No rows attribute (two lines); `m/d/yyyy` placeholder and Atlas's filled calendar icon |
+| Date picker calendar | Glyphicon arrows, two-letter weekdays, placed 4px under the input and button | Atlas's add, subtract and chevron icons, `Sun`…`Sat` with full-name titles, days labelled with their date, a year switcher; placed right under the input at unrounded `left`/`top` |
+| Empty grid | A placeholder row | No body rows, unless the grid has empty-list content |
+| Combo box menu | Placed with a rounded transform | Right under the input at unrounded `top`/`left` |
 
 These choices are still inferred rather than seen, and are the first places
 to look when the two apps differ:
 
 | What | Chosen | Why |
 |------|--------|-----|
-| Date picker | Input fills the row, calendar button at its end, popup calendar in `.mx-calendar` markup | Atlas styles `.mx-compound-control` and `.mx-calendar`; the exact element structure is not in the CSS |
-| Form labels | Above the inputs (`form-group no-columns`) | Mendix 10+ default; the page sets no form orientation |
-| Popup window | 600px wide (mxui's default), centred in the viewport | `PopupWidth` 0 in the model |
 | Sorting | Empty due dates first when ascending; ties by creation order | HSQLDB's and SQLite's default, the database the model's configuration names |

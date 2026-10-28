@@ -116,7 +116,7 @@ export function Combobox(props: ComboboxProps) {
         }
     });
 
-    const { refs, floatingStyles } = useFloating({
+    const { refs, x, y, strategy } = useFloating({
         open: isOpen,
         placement: "bottom-start",
         strategy: "fixed",
@@ -194,7 +194,7 @@ export function Combobox(props: ComboboxProps) {
                         {props.error}
                     </div>
                 ) : null}
-                <div ref={refs.setFloating} className={cx("widget-combobox-menu", { "widget-combobox-menu-hidden": !isOpen })} style={isOpen ? floatingStyles : { visibility: "hidden", position: "fixed" }}>
+                <div ref={refs.setFloating} className={cx("widget-combobox-menu", { "widget-combobox-menu-hidden": !isOpen })} style={isOpen ? { visibility: "visible", position: strategy, top: y, left: x } : { visibility: "hidden", position: "fixed" }}>
                     <ul className="widget-combobox-menu-list" {...getMenuProps({ onMouseDown: e => e.preventDefault() }, { suppressRefError: true })}>
                         {isOpen &&
                             (shown.length === 0 ? (
