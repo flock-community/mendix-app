@@ -13,17 +13,25 @@ buttons create, edit, delete and mark a todo done or not done. Both the `User` a
 
 ## Layout
 
+The project lives under `mendix/`:
+
 | Path | What |
 |------|------|
-| `TodoApp.mpr`, `mprcontents/`, `theme*/`, `javascriptsource/`, `widgets/` | The Mendix project |
-| `mdlsource/01-todo.mdl` | Everything the app adds: `Todo` module, `TodoItem` entity, pages, microflow, security, navigation |
-| `tests/Todo.test.mdl` | Microflow tests for `Todo.ACT_TodoItem_ToggleDone` |
+| `mendix/TodoApp.mpr`, `mendix/mprcontents/`, `mendix/theme*/`, `mendix/javascriptsource/`, `mendix/widgets/` | The Mendix project |
+| `mendix/mdlsource/01-todo.mdl` | Everything the app adds: `Todo` module, `TodoItem` entity, pages, microflow, security, navigation |
+| `mendix/tests/Todo.test.mdl` | Microflow tests for `Todo.ACT_TodoItem_ToggleDone` |
 
 The project was made with `mxcli new`, stripped of the template's unused modules,
 widgets and welcome page, and then had `01-todo.mdl` applied. Re-running the script
 must report everything unchanged.
 
 ## Run it
+
+Run every command below from the `mendix/` folder:
+
+```bash
+cd mendix
+```
 
 ```bash
 curl -fsSL -o ./mxcli https://github.com/mendixlabs/mxcli/releases/download/nightly/mxcli-linux-amd64 && chmod +x ./mxcli
