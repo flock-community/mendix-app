@@ -60,3 +60,10 @@
   a moment later. Tests must wait for the order, not read it right after the click.
 - Selecting from the Combo box right after typing in another field can fail: that
   field's blur re-renders the form and closes the menu that just opened.
+- The generated skills (`.ai-context/skills/`, `.claude/skills/`) and the VS Code
+  `.vsix` are git-ignored. Tested on a clone with them deleted:
+  `mxcli init --sync-skills .` (what the session hook runs) restores the skills
+  byte-identically even though the version stamp says current, but not the 43
+  per-project widget docs in `skills/widgets/`; `mxcli widget docs -p TodoApp.mpr`
+  writes those. It does not restore `.claude/commands/` or `.claude/lint-rules/`
+  either, so those stay committed.
