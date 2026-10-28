@@ -71,13 +71,16 @@ export interface FormGroupProps {
     labelId?: string;
     error?: ReactNode;
     errorId?: string;
+    /** Render as a form group even without a label, as Mendix does for check boxes. */
+    group?: boolean;
     children: ReactNode;
 }
 
-export function FormGroup({ name, widgetClass, className, label, labelFor, labelId, error, errorId, children }: FormGroupProps) {
+export function FormGroup({ name, widgetClass, className, label, labelFor, labelId, error, errorId, group, children }: FormGroupProps) {
     const hasLabel = label !== undefined && label !== null && label !== "";
+    const grouped = group || hasLabel;
     return (
-        <div className={cx(mxName(name), widgetClass, { "form-group": hasLabel, "no-columns": hasLabel, "has-error": !!error }, className)}>
+        <div className={cx(mxName(name), widgetClass, className, { "form-group": grouped, "no-columns": grouped, "has-error": !!error })}>
             {hasLabel && (
                 <label className="control-label" id={labelId} htmlFor={labelFor}>
                     {label}
@@ -188,6 +191,8 @@ export interface CheckBoxProps extends Omit<InputBaseProps<boolean>, "placeholde
 
 export function CheckBox(props: CheckBoxProps) {
     const id = useWidgetId("checkBox");
+    // Mendix puts a check box's label after the box unless told otherwise.
+    const labelPosition = props.labelPosition ?? "after";
     const editable = useEditable(props.editable);
     if (!editable && props.readOnlyStyle === "text") {
         return (
@@ -211,13 +216,14 @@ export function CheckBox(props: CheckBoxProps) {
         <FormGroup
             name={props.name}
             widgetClass="mx-checkbox"
-            className={cx({ "label-after": props.labelPosition === "after" }, props.className)}
-            label={props.labelPosition === "after" ? undefined : props.label}
+            className={cx({ "label-after": labelPosition === "after" }, props.className)}
+            label={labelPosition === "after" ? undefined : props.label}
             labelFor={id}
             error={props.error}
+            group
         >
             {input}
-            {props.labelPosition === "after" && props.label ? (
+            {labelPosition === "after" && props.label ? (
                 <label className="control-label" htmlFor={id}>
                     {props.label}
                 </label>

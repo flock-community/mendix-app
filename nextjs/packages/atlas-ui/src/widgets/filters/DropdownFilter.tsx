@@ -131,7 +131,7 @@ export function DropdownFilter({ name, className, emptySelectionCaption = "", em
             </div>
             <div className={cls("popover")} hidden={!isOpen} ref={refs.setFloating} style={floatingStyles}>
                 <div className={cls("menu-slot")}>
-                    <ul {...getMenuProps({ className: cls("menu"), "aria-label": ariaLabel })}>
+                    <ul {...getMenuProps({ className: cls("menu"), "aria-label": ariaLabel ?? "" })}>
                         {isOpen &&
                             items.map((item, index) => {
                                 const isSelected = selected.includes(item.value);

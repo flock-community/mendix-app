@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { test, expect } from "../support/fixtures";
-import { TodoApp, usDate, type OverviewPage } from "../support/app";
+import { DELETE_QUESTION, usDate, type OverviewPage } from "../support/app";
 import { users } from "../support/env";
 
 /**
@@ -136,31 +136,29 @@ test.describe("Visual parity @visual", () => {
         await snap(testInfo, page, "column-selector-open.png");
     });
 
-    test("todo list in dark mode", async ({ browser }, testInfo) => {
-        const context = await browser.newContext({ colorScheme: "dark", viewport: { width: 1280, height: 800 }, locale: "en-US", timezoneId: "UTC" });
-        try {
-            const app = new TodoApp(await context.newPage());
-            await app.signIn(users.user);
-            await app.overview.deleteAll();
-            await seed(app.overview);
-            await app.settle();
-            await snap(testInfo, app.page, "overview-dark.png");
-        } finally {
-            await context.close();
-        }
+    test("delete confirmation", async ({ todos, page }, testInfo) => {
+        await seed(todos.overview);
+        await todos.overview.row("Call the plumber").deleteButton.click();
+        await todos.overview.confirmation.expectOpen(DELETE_QUESTION);
+        await todos.settle();
+        await snap(testInfo, page, "delete-confirmation.png");
     });
 
-    test("todo list on a phone", async ({ browser }, testInfo) => {
-        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: "en-US", timezoneId: "UTC" });
-        try {
-            const app = new TodoApp(await context.newPage());
-            await app.signIn(users.user);
-            await app.overview.deleteAll();
-            await seed(app.overview);
-            await app.settle();
-            await snap(testInfo, app.page, "overview-phone.png");
-        } finally {
-            await context.close();
-        }
+    test("todo list in dark mode", async ({ openApp }, testInfo) => {
+        const app = await openApp({ colorScheme: "dark", viewport: { width: 1280, height: 800 }, locale: "en-US", timezoneId: "UTC" });
+        await app.signIn(users.user);
+        await app.overview.deleteAll();
+        await seed(app.overview);
+        await app.settle();
+        await snap(testInfo, app.page, "overview-dark.png");
+    });
+
+    test("todo list on a phone", async ({ openApp }, testInfo) => {
+        const app = await openApp({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: "en-US", timezoneId: "UTC" });
+        await app.signIn(users.user);
+        await app.overview.deleteAll();
+        await seed(app.overview);
+        await app.settle();
+        await snap(testInfo, app.page, "overview-phone.png");
     });
 });

@@ -703,7 +703,7 @@ function Pagination(props: {
                 <PagingIcon direction="backward" />
             </button>
             <span className="sr-only sr-only-focusable">
-                {labels.pagingStatus} {status}
+                {`${labels.pagingStatus} ${status}`}
             </span>
             <div aria-hidden={true} className="paging-status">
                 {status}

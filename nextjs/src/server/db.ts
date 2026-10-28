@@ -59,8 +59,9 @@ CREATE INDEX IF NOT EXISTS todo_items_owner ON todo_items(owner_id);
 export function demoUsers(): Array<{ name: string; role: "User" | "Administrator"; password: string }> {
     const shared = process.env.DEMO_PASSWORD ?? "Choose-a-passw0rd";
     return [
-        { name: "demo_administrator", role: "Administrator", password: process.env.DEMO_ADMINISTRATOR_PASSWORD ?? shared },
-        { name: "demo_user", role: "User", password: process.env.DEMO_USER_PASSWORD ?? shared }
+        // The order the Mendix demo user switcher lists them in.
+        { name: "demo_user", role: "User", password: process.env.DEMO_USER_PASSWORD ?? shared },
+        { name: "demo_administrator", role: "Administrator", password: process.env.DEMO_ADMINISTRATOR_PASSWORD ?? shared }
     ];
 }
 

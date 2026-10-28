@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { cx } from "../util/cx";
 
 export interface DemoUser {
     name: string;
@@ -21,26 +20,21 @@ const WIDTH = 360;
 /**
  * The panel Mendix adds to the right edge of every page when demo users are
  * enabled and the app runs in development mode: a tab that slides it open,
- * and one link per demo user to sign in as that user.
+ * and one entry per demo user to sign in as that user. Markup and texts are
+ * the runtime's.
  */
 export function DemoUserSwitcher({ users, current, onSwitch }: DemoUserSwitcherProps) {
     const [open, setOpen] = useState(false);
     return (
-        <div className="mx-demouserswitcher" style={{ right: open ? 0 : -WIDTH, transition: "right 0.25s ease" }}>
-            <div className="mx-demouserswitcher-toggle" title="Demo users" role="button" tabIndex={0} aria-expanded={open} onClick={() => setOpen(o => !o)} onKeyDown={e => (e.key === "Enter" || e.key === " ") && setOpen(o => !o)} />
+        <div className="mx-demouserswitcher" style={{ right: open ? 0 : -WIDTH, transition: "right 0.3s" }}>
+            <div className="mx-demouserswitcher-toggle" onClick={() => setOpen(o => !o)} />
             <div className="mx-demouserswitcher-content">
-                <h2>Demo users</h2>
+                <h2>Select user</h2>
+                <p>Select one of the demo users to view the application with the associated user roles.</p>
                 <ul>
                     {users.map(user => (
-                        <li key={user.name}>
-                            <a
-                                href="#"
-                                className={cx({ active: user.name === current })}
-                                onClick={event => {
-                                    event.preventDefault();
-                                    onSwitch(user.name);
-                                }}
-                            >
+                        <li key={user.name} className={user.name === current ? "active" : ""} style={{ cursor: "pointer" }} onClick={() => onSwitch(user.name)}>
+                            <a>
                                 <h3>{user.name}</h3>
                                 <p>{user.roles.join(", ")}</p>
                             </a>

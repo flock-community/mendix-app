@@ -5,8 +5,10 @@
  */
 
 // Page structure
-export { Page, Placeholder, ScrollContainer, LayoutGrid, Row, Column, Container, containerDesign } from "./core/layout";
-export type { PageProps, ScrollContainerProps, RegionProps, LayoutGridProps, ColumnProps, ColumnWeight, ContainerProps } from "./core/layout";
+export { AppRoot, Page, usePageName } from "./core/page";
+export type { AppRootProps, PageProps } from "./core/page";
+export { Placeholder, ScrollContainer, LayoutGrid, Row, Column, Container, containerDesign } from "./core/layout";
+export type { ScrollContainerProps, RegionProps, LayoutGridProps, ColumnProps, ColumnWeight, ContainerProps } from "./core/layout";
 
 // Basic widgets
 export { ActionButton, DynamicText, Icon, MenuBar, atlasIcon } from "./core/basic";
@@ -19,6 +21,8 @@ export { DatePicker, Calendar } from "./core/datepicker";
 export type { DatePickerProps, CalendarProps } from "./core/datepicker";
 export { PopupWindow } from "./core/popup";
 export type { PopupWindowProps } from "./core/popup";
+export { confirmation } from "./core/dialog";
+export type { ConfirmationOptions } from "./core/dialog";
 export { DemoUserSwitcher } from "./core/demousers";
 export type { DemoUserSwitcherProps, DemoUser } from "./core/demousers";
 
@@ -44,4 +48,4 @@ export type { ListValue, ListQuery, ListPage, SortInstruction, SortDirection, Li
 export type { FilterCondition, FilterValue } from "./data/filters";
 
 /** The stylesheets atlas-theme writes, in the order Mendix loads them. */
-export const atlasStylesheets = ["/theme.compiled.css", "/widgets/widgets.css", "/mxicons/icons.css"] as const;
+export const atlasStylesheets = ["/widgets/widgets.css", "/theme.compiled.css", "/mxicons/icons.css"] as const;

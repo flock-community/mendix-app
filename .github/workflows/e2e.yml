@@ -156,6 +156,8 @@ jobs:
             mendix/.mxcli/*.log
             ${{ runner.temp }}/nextjs.log
           if-no-files-found: ignore
+          # mxcli writes the runtime log to mendix/.mxcli/run.log, a hidden folder.
+          include-hidden-files: true
           retention-days: 14
 
       - name: Stop the Mendix app

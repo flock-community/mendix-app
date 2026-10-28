@@ -7,7 +7,7 @@ test.describe("Layout and navigation", () => {
     });
 
     test("the home page is the todo overview", async ({ app, page }) => {
-        await expect(page).toHaveTitle(/Todos/);
+        await expect(page).toHaveTitle("Mendix - Todos");
         await expect(app.overview.heading).toHaveText("My todos");
         await expect(page.locator("h2.mx-name-heading")).toHaveCount(1);
         await expect(app.overview.newButton).toHaveText("New todo");
@@ -21,17 +21,18 @@ test.describe("Layout and navigation", () => {
     });
 
     test("the menu bar has one item, Todos, with its icon", async ({ page }) => {
-        const menu = page.locator(".region-topbar .mx-name-mainMenu");
-        const items = menu.locator("li.mx-menubar-item");
+        // The React client renders a menu bar as a Bootstrap navbar.
+        const menu = page.locator(".region-topbar .mx-name-mainMenu.mx-navbar");
+        const items = menu.locator("ul.navbar-nav > li.mx-navbar-item");
 
         await expect(items).toHaveCount(1);
         await expect(items.first()).toHaveText("Todos");
         await expect(items.first().locator(".mx-icon-lined.mx-icon-list-bullets")).toHaveCount(1);
-        await expect(items.first()).toHaveClass(/active/);
+        await expect(items.first().locator("a.mx-name-mainMenu-0")).toHaveAttribute("href", "/p/todos");
     });
 
     test("the Todos menu item opens the overview", async ({ app, page }) => {
-        await page.locator(".mx-name-mainMenu li.mx-menubar-item a").first().click();
+        await page.locator(".mx-name-mainMenu li.mx-navbar-item a").first().click();
 
         await app.overview.waitForGrid();
         await expect(page).toHaveURL(/\/p\/todos$/);
@@ -41,6 +42,8 @@ test.describe("Layout and navigation", () => {
     test("the top bar's language selector lists the app's one language", async ({ page }) => {
         const selector = page.locator(".region-topbar .widget-language-selector");
         await expect(selector).toBeVisible();
+        // A user without a language of their own gets the app's default.
+        await expect(selector.locator(".current-language-text")).toHaveText("English, United States");
 
         await selector.locator(".popupmenu-trigger").click();
 

@@ -1,3 +1,4 @@
+import { AppRoot } from "@flock-community/atlas-ui";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/server/auth";
@@ -14,9 +15,9 @@ export default async function TodoItemOverviewPage() {
     const user = await currentUser();
     if (!user) redirect(`/login.html?cont=${encodeURIComponent("/p/todos")}`);
     return (
-        <>
+        <AppRoot roles={[user.role]}>
             <TodoItemOverview />
             {demoUserSwitcherEnabled() && <DemoUsers users={demoUsers().map(u => ({ name: u.name, roles: [u.role] }))} current={user.name} />}
-        </>
+        </AppRoot>
     );
 }
