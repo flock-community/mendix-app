@@ -151,7 +151,7 @@
   .compare .handle::after { content: "⇆"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; background: var(--ai); color: #fff; display: grid; place-items: center; font-size: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
   .compare input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
   .compare input:focus-visible ~ .handle { box-shadow: 0 0 0 3px rgba(181,83,47,.35); }
-  .compare .side { position: absolute; top: 10px; font-size: 13px; font-weight: 600; color: #fff; background: rgba(20,24,31,.78); border-radius: 999px; padding: 4px 10px 4px 6px; display: inline-flex; align-items: center; gap: 6px; pointer-events: none; }
+  .compare .side { position: absolute; bottom: 10px; font-size: 13px; font-weight: 600; color: #fff; background: rgba(20,24,31,.78); border-radius: 999px; padding: 4px 10px 4px 6px; display: inline-flex; align-items: center; gap: 6px; pointer-events: none; }
   .compare .side img { width: 18px; height: 18px; }
   .compare .side.l { left: 10px; }
   .compare .side.r { right: 10px; }
@@ -166,12 +166,14 @@
   .trio figcaption { font-size: 15px; color: var(--muted); margin-top: 8px; display: flex; justify-content: space-between; gap: 8px; }
   .trio figcaption b { color: var(--brand-deep); font-weight: 600; }
 
-  /* Proof table */
-  .results { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: start; }
-  .results table td, .results table th { padding: 6px 14px; font-size: 14.5px; }
-  .results td.num-cell { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13.5px; }
-  .results td.ok { color: var(--brand-deep); font-weight: 600; }
-  .results td.bad { color: var(--ai); font-weight: 600; }
+  /* Proof list */
+  .results { display: grid; grid-template-columns: 1.5fr 1fr; gap: 22px; align-items: start; }
+  .screens { list-style: none; margin: 0; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
+  .screens li { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.35; }
+  .screens li::marker { content: none; }
+  .screens b { font-family: var(--mono); font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .screens b.ok { color: var(--brand-deep); }
+  .screens b.bad { color: var(--ai); }
   .stats { display: grid; gap: 14px; }
   .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px; }
   .stat b { display: block; font-size: 36px; line-height: 1; color: var(--brand); margin-bottom: 6px; letter-spacing: -.02em; }
@@ -530,16 +532,16 @@
     <p class="kicker">The proof</p>
     <h2>Every screen, every test, both apps</h2>
     <div class="results">
-      <table>
-        <thead><tr><th>Screenshot</th><th style="text-align:right">Pixels that differ</th><th>Result</th></tr></thead>
-        <tbody>
+      <div>
+        <ul class="screens" aria-label="Pixels that differ from Mendix, per screenshot">
 __RESULT_ROWS__
-        </tbody>
-      </table>
+        </ul>
+        <p class="hint">Share of pixels that differ from the Mendix screenshot. The build fails above 1%.</p>
+      </div>
       <div class="stats">
         <div class="stat"><b>__MENDIX_PASSED__</b><span>tests pass on the Mendix app</span></div>
         <div class="stat"><b>__NEXTJS_PASSED__</b><span>tests pass on the Next.js rebuild: the same tests</span></div>
-        <div class="stat"><b>__SCREENS_OK__</b><span>screenshots within 1% of Mendix's</span></div>
+        <div class="stat"><b>__SCREENS_OK__</b><span>screenshots within 1% of Mendix's, compared in CI on every push</span></div>
       </div>
     </div>
   </section>
