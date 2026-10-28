@@ -1,0 +1,74 @@
+/* Icons of the Data grid 2 widget, as it draws them. */
+
+export function SortAscIcon() {
+    return (
+        <svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="long-arrow-alt-up" className="svg-inline--fa fa-long-arrow-alt-up fa-w-8" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512">
+            <path
+                fill="currentColor"
+                d="M88 166.059V468c0 6.627 5.373 12 12 12h56c6.627 0 12-5.373 12-12V166.059h46.059c21.382 0 32.09-25.851 16.971-40.971l-86.059-86.059c-9.373-9.373-24.569-9.373-33.941 0l-86.059 86.059c-15.119 15.119-4.411 40.971 16.971 40.971H88z"
+            />
+        </svg>
+    );
+}
+
+export function SortDescIcon() {
+    return (
+        <svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="long-arrow-alt-down" className="svg-inline--fa fa-long-arrow-alt-down fa-w-8" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512">
+            <path
+                fill="currentColor"
+                d="M168 345.941V44c0-6.627-5.373-12-12-12h-56c-6.627 0-12 5.373-12 12v301.941H41.941c-21.382 0-32.09 25.851-16.971 40.971l86.059 86.059c9.373 9.373 24.569 9.373 33.941 0l86.059-86.059c15.119-15.119 4.411-40.971-16.971-40.971H168z"
+            />
+        </svg>
+    );
+}
+
+export function SortNoneIcon() {
+    return (
+        <svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="arrows-alt-v" className="svg-inline--fa fa-arrows-alt-v fa-w-8" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512">
+            <path
+                fill="currentColor"
+                d="M214.059 377.941H168V134.059h46.059c21.382 0 32.09-25.851 16.971-40.971L144.971 7.029c-9.373-9.373-24.568-9.373-33.941 0L24.971 93.088c-15.119 15.119-4.411 40.971 16.971 40.971H88v243.882H41.941c-21.382 0-32.09 25.851-16.971 40.971l86.059 86.059c9.373 9.373 24.568 9.373 33.941 0l86.059-86.059c15.12-15.119 4.412-40.971-16.97-40.971z"
+            />
+        </svg>
+    );
+}
+
+export function EyeIcon() {
+    return (
+        <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="eye" className="svg-inline--fa fa-eye fa-w-18" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+            <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M0.589893 7.715C0.724893 7.52 3.91989 3 7.99989 3C12.0799 3 15.2749 7.52 15.4099 7.715L15.6099 8L15.4099 8.285C15.2749 8.48 12.0799 13 7.99989 13C3.91989 13 0.724893 8.48 0.589893 8.285L0.389893 8L0.589893 7.715ZM1.62489 8C2.37489 8.96 4.98989 12 7.99989 12C11.0099 12 13.6249 8.96 14.3749 8C13.6249 7.04 11.0099 4 7.99989 4C4.98989 4 2.37489 7.04 1.62489 8ZM5.5 8C5.5 6.62 6.62 5.5 8 5.5C9.38 5.5 10.5 6.62 10.5 8C10.5 9.38 9.38 10.5 8 10.5C6.62 10.5 5.5 9.38 5.5 8ZM6.5 8C6.5 8.825 7.175 9.5 8 9.5C8.825 9.5 9.5 8.825 9.5 8C9.5 7.175 8.825 6.5 8 6.5C7.175 6.5 6.5 7.175 6.5 8Z"
+                fill="currentColor"
+            />
+        </svg>
+    );
+}
+
+type PagingDirection = "step-backward" | "backward" | "forward" | "step-forward";
+
+const pagingPaths: Record<PagingDirection, string[]> = {
+    forward: [
+        "M17.81 6.63C17.48 6.37 17 6.61 17 7.02V24.98C17 25.4 17.48 25.63 17.81 25.37L28.5 16.39C28.76 16.19 28.76 15.8 28.5 15.6L17.81 6.63Z",
+        "M4.81 6.63C4.48 6.37 4 6.61 4 7.02V24.98C4 25.4 4.48 25.63 4.81 25.37L15.5 16.39C15.76 16.19 15.76 15.8 15.5 15.6L4.81 6.63Z"
+    ],
+    "step-forward": ["M8.81 6.63C8.48 6.37 8 6.61 8 7.02V24.98C8 25.4 8.48 25.63 8.81 25.37L20.5 16.39C20.76 16.19 20.76 15.8 20.5 15.6L8.81 6.63Z", "M24 6H22V26H24V6Z"],
+    backward: [
+        "M14.19 6.63L3.51 15.61C3.25 15.81 3.25 16.2 3.51 16.4L14.2 25.38C14.53 25.64 15.01 25.4 15.01 24.99V7.02C15.01 6.6 14.53 6.37 14.2 6.63H14.19Z",
+        "M27.19 6.63L16.5 15.61C16.24 15.81 16.24 16.2 16.5 16.4L27.19 25.38C27.52 25.64 28 25.4 28 24.99V7.02C28 6.6 27.52 6.37 27.19 6.63Z"
+    ],
+    "step-backward": ["M23.19 6.63L11.51 15.61C11.25 15.81 11.25 16.2 11.51 16.4L23.2 25.38C23.53 25.64 24.01 25.4 24.01 24.99V7.02C24.01 6.6 23.53 6.37 23.2 6.63H23.19Z", "M10 6H8V26H10V6Z"]
+};
+
+export function PagingIcon({ direction }: { direction: PagingDirection }) {
+    return (
+        <span aria-hidden={true}>
+            <svg className={`pagination-icon ${direction}`} viewBox="0 0 32 32" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                {pagingPaths[direction].map(d => (
+                    <path key={d} d={d} fill="currentColor" />
+                ))}
+            </svg>
+        </span>
+    );
+}

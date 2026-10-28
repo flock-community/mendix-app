@@ -13,17 +13,29 @@ buttons create, edit, delete and mark a todo done or not done. Both the `User` a
 
 ## Layout
 
+The repository holds the Mendix app, a Next.js rebuild of it, and one
+end-to-end suite that runs against both:
+
 | Path | What |
 |------|------|
-| `TodoApp.mpr`, `mprcontents/`, `theme*/`, `javascriptsource/`, `widgets/` | The Mendix project |
-| `mdlsource/01-todo.mdl` | Everything the app adds: `Todo` module, `TodoItem` entity, pages, microflow, security, navigation |
-| `tests/Todo.test.mdl` | Microflow tests for `Todo.ACT_TodoItem_ToggleDone` |
+| `mendix/TodoApp.mpr`, `mendix/mprcontents/`, `mendix/theme*/`, `mendix/javascriptsource/`, `mendix/widgets/` | The Mendix project |
+| `mendix/mdlsource/01-todo.mdl` | Everything the app adds: `Todo` module, `TodoItem` entity, pages, microflow, security, navigation |
+| `mendix/tests/Todo.test.mdl` | Microflow tests for `Todo.ACT_TodoItem_ToggleDone` |
+| [`e2e/`](e2e) | Playwright scenarios and screenshot comparisons, for either app |
+| [`nextjs/`](nextjs) | The Next.js rebuild |
+| [`nextjs/packages/atlas-ui/`](nextjs/packages/atlas-ui) | The reusable part: Mendix-markup React components and the `atlas-theme` CLI |
 
 The project was made with `mxcli new`, stripped of the template's unused modules,
 widgets and welcome page, and then had `01-todo.mdl` applied. Re-running the script
 must report everything unchanged.
 
 ## Run it
+
+Run every command below from the `mendix/` folder:
+
+```bash
+cd mendix
+```
 
 ```bash
 curl -fsSL -o ./mxcli https://github.com/mendixlabs/mxcli/releases/download/nightly/mxcli-linux-amd64 && chmod +x ./mxcli
@@ -54,3 +66,11 @@ anywhere real: `alter app security ( EnableDemoUsers: false );`.
 ./mxcli docker check -p TodoApp.mpr
 ./mxcli test tests/ -p TodoApp.mpr --local
 ```
+
+## The Next.js rebuild
+
+[`nextjs/`](nextjs) rebuilds the app in Next.js, with the Mendix theme compiled
+from `mendix/` so it looks the same. See its README to run it, and
+[`e2e/`](e2e) to check both apps against the same scenarios and screenshots.
+The `e2e` GitHub Actions workflow starts both apps and runs the suite against
+each on every push.

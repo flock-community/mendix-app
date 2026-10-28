@@ -1,0 +1,33 @@
+# Publishes the migration deck in slides/ to the gh-pages branch, which GitHub
+# Pages serves. Runs when slides/ changes on the default branch, or by hand
+# (Actions → slides → Run workflow) to publish any branch's version.
+name: slides
+
+on:
+  push:
+    paths:
+      - "slides/**"
+      - ".github/workflows/slides.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slides
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # slides/ becomes the root of a fresh gh-pages commit; the branch holds
+      # nothing but the published site.
+      - name: Publish slides/ to gh-pages
+        run: |
+          commit=$(git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit-tree "HEAD:slides" -m "Publish slides from ${GITHUB_SHA}")
+          git push --force origin "${commit}:refs/heads/gh-pages"
