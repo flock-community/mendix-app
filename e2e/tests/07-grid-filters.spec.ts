@@ -164,7 +164,7 @@ test.describe("Grid filters", () => {
         await overview.titleFilter.fill("milk");
         await overview.expectTitles([`Buy milk ${id}`, `Call milkman ${id}`]);
 
-        await overview.newButton.click();
+        await overview.openNew();
         await overview.popup.fill({ title: `Walk dog ${id}` });
         await overview.popup.save.click();
         await overview.popup.expectClosed();

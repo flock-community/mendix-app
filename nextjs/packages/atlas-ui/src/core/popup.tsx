@@ -41,7 +41,8 @@ export function PopupWindow({ page, caption, onClose, width, height, className, 
         const node = ref.current;
         if (!node) return;
         const place = () => {
-            const rect = node.getBoundingClientRect();
+            // Mendix measures with offsetWidth/offsetHeight, whole pixels.
+            const rect = { width: node.offsetWidth, height: node.offsetHeight };
             setPosition({
                 left: Math.max(0, (window.innerWidth - rect.width) / 2),
                 top: Math.max(0, (window.innerHeight - rect.height) * 0.35)
