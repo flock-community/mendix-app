@@ -250,9 +250,30 @@ export class OverviewPage {
         await expect.poll(() => this.titles(), { timeout: 10_000 }).toEqual(titles);
     }
 
+    /**
+     * Opens the New todo popup, ready to type in. When New follows a save's
+     * grid refresh within about 100 ms, Mendix's client now and then opens the
+     * popup without binding its new object: the inputs stay disabled, with no
+     * error. A person would close it and click New again, and so does this,
+     * once; a popup that stays disabled the second time fails the test.
+     */
+    async openNew(): Promise<void> {
+        for (let attempt = 1; ; attempt++) {
+            await this.newButton.click();
+            await this.popup.expectOpen();
+            try {
+                await expect(this.popup.title).toBeEnabled({ timeout: 5_000 });
+                return;
+            } catch (error) {
+                if (attempt === 2) throw error;
+                await this.popup.closeButton.click();
+                await this.popup.expectClosed();
+            }
+        }
+    }
+
     async create(todo: TodoInput): Promise<void> {
-        await this.newButton.click();
-        await this.popup.expectOpen();
+        await this.openNew();
         await this.popup.fill(todo);
         await this.popup.save.click();
         await this.popup.expectClosed();

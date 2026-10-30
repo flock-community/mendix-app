@@ -5,7 +5,7 @@ import { uid, usDate } from "../support/app";
 test.describe("Create a todo", () => {
     test("New todo opens an empty Edit todo popup with the model's defaults", async ({ todos }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
 
         const popup = overview.popup;
         await popup.expectOpen();
@@ -22,7 +22,7 @@ test.describe("Create a todo", () => {
     });
 
     test("the title field has focus when the popup opens", async ({ todos }) => {
-        await todos.overview.newButton.click();
+        await todos.overview.openNew();
         await todos.overview.popup.expectOpen();
 
         await expect(todos.overview.popup.title).toBeFocused();
@@ -62,7 +62,7 @@ test.describe("Create a todo", () => {
 
     test("a todo needs a title", async ({ todos }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
         const popup = overview.popup;
         await popup.expectOpen();
 
@@ -87,7 +87,7 @@ test.describe("Create a todo", () => {
 
     test("Cancel discards the new todo", async ({ todos }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
         await overview.popup.fill({ title: `Never saved ${uid()}`, priority: "Low" });
         await overview.popup.cancel.click();
 
@@ -98,7 +98,7 @@ test.describe("Create a todo", () => {
 
     test("the close button discards the new todo", async ({ todos }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
         await overview.popup.fill({ title: `Never saved ${uid()}` });
         await overview.popup.closeButton.click();
 
@@ -108,7 +108,7 @@ test.describe("Create a todo", () => {
 
     test("Escape closes the popup without saving", async ({ todos, page }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
         await overview.popup.fill({ title: `Never saved ${uid()}` });
         await page.keyboard.press("Escape");
 
@@ -118,7 +118,7 @@ test.describe("Create a todo", () => {
 
     test("the priority combo box lists the enumeration in model order", async ({ todos, page }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
         await overview.popup.priority.click();
 
         await expect(page.getByRole("option")).toHaveText(["Low", "Medium", "High"]);
@@ -126,7 +126,7 @@ test.describe("Create a todo", () => {
 
     test("the date picker button opens a calendar to pick the due date", async ({ todos, page }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
         const popup = overview.popup;
         await popup.fill({ title: `Calendar ${uid()}` });
 
@@ -140,7 +140,7 @@ test.describe("Create a todo", () => {
 
     test("a date that is not a date is refused", async ({ todos }) => {
         const { overview } = todos;
-        await overview.newButton.click();
+        await overview.openNew();
         const popup = overview.popup;
         await popup.fill({ title: `Bad date ${uid()}`, dueDate: "not a date" });
 

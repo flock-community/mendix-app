@@ -86,14 +86,14 @@ test.describe("Visual parity @visual", () => {
     });
 
     test("new todo popup", async ({ todos, page }, testInfo) => {
-        await todos.overview.newButton.click();
+        await todos.overview.openNew();
         await todos.overview.popup.expectOpen();
         await todos.settle();
         await snap(testInfo, page, "popup-new.png");
     });
 
     test("new todo popup with a validation error", async ({ todos, page }, testInfo) => {
-        await todos.overview.newButton.click();
+        await todos.overview.openNew();
         await todos.overview.popup.save.click();
         await expect(todos.overview.popup.titleGroup.locator(".mx-validation-message")).toBeVisible();
         await todos.settle();
@@ -110,7 +110,7 @@ test.describe("Visual parity @visual", () => {
     });
 
     test("priority combo box, open", async ({ todos, page }, testInfo) => {
-        await todos.overview.newButton.click();
+        await todos.overview.openNew();
         await todos.overview.popup.priority.click();
         await expect(page.getByRole("option")).toHaveCount(3);
         await todos.settle();
