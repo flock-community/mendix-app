@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rebuilding a Mendix App</title>
+<meta name="description" content="How Claude Code rebuilt a Mendix app in Next.js, test first and pixel for pixel: the approach, the steps, the proof that it looks the same, and the business case.">
+<style>
+  @font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("fonts/ibm-plex-sans-latin-700-normal.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+  @font-face { font-family: "IBM Plex Mono"; src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+  @font-face { font-family: "IBM Plex Mono"; src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+
+  /* The migrated app's own palette (mxcli "Signal" theme). */
+  :root {
+    --brand: #0f6e6b;
+    --brand-deep: #0b5754;
+    --brand-tint: #e3efef;
+    --ai: #b5532f;
+    --ai-tint: #f9ebe4;
+    --ink: #14181f;
+    --muted: #5a6572;
+    --faint: #98a1ad;
+    --line: #dce1e7;
+    --ground: #f4f6f8;
+    --surface: #ffffff;
+    --rail: #14181f;
+    --rail-ink: #d3d8de;
+    --code-bg: #14181f;
+    --code-ink: #e6edf3;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: #0b0e12; color: var(--ink); font-family: var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+  /* A fixed 1280x720 stage, scaled to the window. */
+  .viewport { position: fixed; inset: 0; display: grid; place-items: center; }
+  .deck { position: relative; width: 1280px; height: 720px; transform-origin: center center; }
+  .slide {
+    position: absolute; inset: 0; padding: 64px 80px 72px;
+    background: var(--ground); display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden; transition: opacity .25s ease;
+  }
+  .slide.active { opacity: 1; visibility: visible; }
+  .slide.dark { background: var(--rail); color: #fff; }
+  @media (prefers-reduced-motion: reduce) { .slide { transition: none; } }
+
+  .kicker { font-size: 15px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); margin: 0 0 10px; }
+  .dark .kicker { color: #3fbdb8; }
+  h1 { font-size: 60px; line-height: 1.05; margin: 0; font-weight: 700; letter-spacing: -.02em; }
+  h2 { font-size: 40px; line-height: 1.15; margin: 0 0 28px; font-weight: 600; letter-spacing: -.01em; }
+  h3 { font-size: 20px; margin: 0 0 8px; font-weight: 600; }
+  p, li { font-size: 20px; line-height: 1.45; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0; padding-left: 22px; }
+  li { margin: 0 0 8px; }
+  li::marker { color: var(--brand); }
+  .muted { color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: .9em; }
+  :not(pre) > code { background: var(--brand-tint); color: var(--brand-deep); padding: 1px 6px; border-radius: 4px; }
+
+  .grid { display: grid; gap: 22px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 22px 24px; }
+  .card p, .card li { font-size: 18px; }
+  .card p:last-child { margin-bottom: 0; }
+
+  .logos { display: flex; flex-wrap: wrap; gap: 14px; }
+  .logo { display: inline-flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px 8px 10px; font-size: 16px; font-weight: 500; }
+  .logo img { width: 28px; height: 28px; object-fit: contain; }
+
+  /* "Done by Claude Code" marks */
+  .ai-strip { display: flex; align-items: center; gap: 16px; margin-top: 22px; background: var(--ai-tint); border: 1px solid #ecc7b6; border-radius: 8px; padding: 16px 22px; }
+  .ai-strip img { width: 36px; height: 36px; flex: none; }
+  .ai-strip p { margin: 0; font-size: 18px; }
+
+  /* Title slide */
+  .title-mark { display: flex; align-items: center; gap: 28px; margin-bottom: 40px; }
+  .title-mark img { width: 92px; height: 92px; }
+  .title-mark .arrow { font-size: 48px; color: #3fbdb8; }
+  .title-sub { font-size: 26px; color: var(--rail-ink); margin-top: 22px; max-width: 980px; line-height: 1.38; }
+  .title-foot { margin-top: auto; display: flex; align-items: center; gap: 28px; color: var(--rail-ink); font-size: 18px; }
+  .title-foot span { display: inline-flex; align-items: center; gap: 10px; }
+  .title-foot img { width: 24px; height: 24px; }
+  .title-foot .claude { color: #f0a283; font-weight: 600; }
+
+  /* Approach */
+  .principle .num { margin-bottom: 12px; }
+  .principle p { color: var(--muted); }
+
+  /* Prompt */
+  .prompt { background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 22px 24px; }
+  .prompt::before { content: "Prompt"; display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #8b949e; margin-bottom: 10px; font-weight: 600; }
+  .prompt p { font-size: 18px; line-height: 1.5; margin: 0; }
+  .did li { font-size: 17.5px; margin-bottom: 7px; }
+  .did h3, .phase .card h3 { display: flex; align-items: center; gap: 10px; }
+  .did h3 img, .phase .card h3 img { width: 24px; height: 24px; }
+  .people { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 17px; color: var(--muted); }
+
+  /* Steps overview */
+  .num { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: 17px; margin-bottom: 14px; }
+  .flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-top: 4px; }
+  .flow .step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 16px 18px; min-height: 250px; display: flex; flex-direction: column; }
+  .flow .step:not(:last-child)::after { content: "→"; position: absolute; right: -15px; top: 30px; color: var(--brand); font-size: 22px; font-weight: 600; }
+  .flow .step.loop { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+  .flow h3 { font-size: 19px; }
+  .flow p { font-size: 15.5px; color: var(--muted); margin: 0; }
+  .flow .tech { display: flex; gap: 8px; margin-top: auto; padding-top: 14px; }
+  .flow .tech img { width: 26px; height: 26px; object-fit: contain; }
+  .loop-note { display: flex; align-items: center; gap: 12px; margin-top: 22px; font-size: 19px; color: var(--muted); }
+  .loop-note b { color: var(--brand-deep); }
+
+  /* Step slides */
+  .step-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+  .step-head .logos { margin-top: 4px; justify-content: flex-end; max-width: 560px; }
+  .phase { display: grid; grid-template-columns: 1.35fr 1fr; gap: 22px; }
+  .io { display: grid; gap: 12px; align-content: start; }
+  .io div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+  .io b { display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .io p { font-size: 17px; margin: 0; }
+  .io .done { border-color: var(--brand); background: #f3f9f9; }
+  .io .done b { color: var(--brand-deep); }
+
+  pre { margin: 0; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 16px 20px; font-family: var(--mono); font-size: 15px; line-height: 1.55; overflow: hidden; }
+  .tk-t { color: #7ee787; }
+
+  table { border-collapse: collapse; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 18px; font-size: 17px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.4; }
+  th { background: #edf2f2; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+
+  /* CI pipeline */
+  .pipeline { display: grid; grid-template-columns: 1fr 30px 1fr 30px 1fr; align-items: stretch; }
+  .stage { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+  .stage h3 { font-size: 16.5px; margin-bottom: 4px; }
+  .stage p { font-size: 14.5px; color: var(--muted); margin: 0; line-height: 1.4; }
+  .stage.key { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+  .link { display: grid; place-items: center; color: var(--brand); font-size: 20px; font-weight: 600; }
+
+  /* Proof: drag the split between the Mendix and the Next.js screenshot */
+  .compare { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); --pos: 50%; user-select: none; }
+  .compare img { display: block; width: 100%; height: auto; }
+  .compare .top { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--pos)) 0 0); }
+  .compare .handle { position: absolute; top: 0; bottom: 0; left: var(--pos); width: 2px; margin-left: -1px; background: var(--ai); pointer-events: none; }
+  .compare .handle::after { content: "⇆"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; background: var(--ai); color: #fff; display: grid; place-items: center; font-size: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+  .compare input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+  .compare input:focus-visible ~ .handle { box-shadow: 0 0 0 3px rgba(181,83,47,.35); }
+  .compare .side { position: absolute; bottom: 10px; font-size: 13px; font-weight: 600; color: #fff; background: rgba(20,24,31,.78); border-radius: 999px; padding: 4px 10px 4px 6px; display: inline-flex; align-items: center; gap: 6px; pointer-events: none; }
+  .compare .side img { width: 18px; height: 18px; }
+  .compare .side.l { left: 10px; }
+  .compare .side.r { right: 10px; }
+  .proof { display: grid; grid-template-columns: 720px 1fr; gap: 24px; align-items: start; }
+  .verdict { display: grid; gap: 12px; }
+  .verdict .card { padding: 16px 20px; }
+  .verdict b { display: block; font-size: 36px; line-height: 1.05; color: var(--brand); letter-spacing: -.02em; margin-bottom: 4px; }
+  .verdict span { font-size: 15.5px; color: var(--muted); line-height: 1.4; display: block; }
+  .hint { font-size: 14px; color: var(--faint); margin: 8px 0 0; }
+  .trio { display: grid; grid-template-columns: 1fr 1fr 150px; gap: 18px; align-items: start; }
+  .trio figure { margin: 0; }
+  .trio figcaption { font-size: 15px; color: var(--muted); margin-top: 8px; display: flex; justify-content: space-between; gap: 8px; }
+  .trio figcaption b { color: var(--brand-deep); font-weight: 600; }
+
+  /* Proof list */
+  .results { display: grid; grid-template-columns: 1.5fr 1fr; gap: 22px; align-items: start; }
+  .screens { list-style: none; margin: 0; padding: 14px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }
+  .screens li { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.35; }
+  .screens li::marker { content: none; }
+  .screens b { font-family: var(--mono); font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .screens b.ok { color: var(--brand-deep); }
+  .screens b.bad { color: var(--ai); }
+  .stats { display: grid; gap: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 20px; }
+  .stat b { display: block; font-size: 36px; line-height: 1; color: var(--brand); margin-bottom: 6px; letter-spacing: -.02em; }
+  .stat span { font-size: 15.5px; color: var(--muted); line-height: 1.35; display: block; }
+
+  /* Tech wall */
+  .wall { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .wall .card { padding: 18px 20px; }
+  .wall h3 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .tech-item { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 17px; font-weight: 500; }
+  .tech-item img { width: 30px; height: 30px; object-fit: contain; }
+  .tech-item small { display: block; font-size: 13.5px; color: var(--muted); font-weight: 400; }
+  .tech-item .mark { width: 30px; height: 30px; border-radius: 6px; background: var(--brand-tint); color: var(--brand-deep); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; }
+  .credits { margin-top: auto; font-size: 12.5px; color: var(--faint); }
+
+  /* Business case */
+  .case { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .case h3 { font-size: 18px; margin-bottom: 10px; }
+  .case li { font-size: 16.5px; margin-bottom: 6px; }
+  .case li b { font-weight: 600; }
+  .case .how { background: #f3f9f9; border-color: var(--brand); }
+  .fit { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .fit p { font-size: 16px; margin: 0; color: var(--muted); }
+  .fit b { color: var(--ink); font-weight: 600; }
+
+  /* Chrome */
+  .chrome { position: absolute; left: 80px; right: 80px; bottom: 24px; display: flex; justify-content: space-between; font-size: 13px; color: var(--faint); pointer-events: none; }
+  .on-dark .chrome { color: #6b7787; }
+  .progress { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--brand); transition: width .25s ease; }
+  .nav { position: fixed; right: 16px; bottom: 14px; display: flex; align-items: center; gap: 8px; z-index: 2; }
+  .nav button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.18); background: rgba(20,24,31,.72); color: #fff; font-size: 18px; cursor: pointer; }
+  .nav button:focus-visible { outline: 2px solid #3fbdb8; outline-offset: 2px; }
+  .counter { min-width: 56px; text-align: center; font-size: 13px; color: #fff; background: rgba(20,24,31,.72); border-radius: 999px; padding: 6px 10px; font-variant-numeric: tabular-nums; }
+
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    body { background: none; overflow: visible; }
+    .viewport { position: static; display: block; }
+    .deck { transform: none !important; width: 1280px; height: auto; }
+    .slide { position: relative; opacity: 1; visibility: visible; width: 1280px; height: 720px; page-break-after: always; break-after: page; }
+    .nav, .progress { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="viewport">
+<main class="deck" id="deck">
+
+  <!-- 1 Title -->
+  <section class="slide dark" aria-label="Title">
+    <div class="title-mark">
+      <img src="logos/mendix.png" alt="Mendix">
+      <span class="arrow" aria-hidden="true">→</span>
+      <img src="logos/nextjs-white.svg" alt="Next.js">
+    </div>
+    <p class="kicker">A migration done by AI</p>
+    <h1>Rebuilding a Mendix app,<br>pixel for pixel</h1>
+    <p class="title-sub">Claude Code moved the TodoApp from Mendix to Next.js: it read the model, wrote the tests, built the components, rebuilt the app and proved it looks the same.</p>
+    <div class="title-foot">
+      <span class="claude"><img src="logos/claude.svg" alt="">Migrated by Claude Code</span>
+      <span><img src="logos/github-white.svg" alt="">flock-community/mendix-app</span>
+    </div>
+  </section>
+
+  <!-- 2 Approach -->
+  <section class="slide" aria-label="The approach">
+    <p class="kicker">The approach</p>
+    <h2>The Mendix app is the specification</h2>
+    <div class="grid cols-3">
+      <div class="card principle"><span class="num">1</span><h3>Capture before you build</h3><p>Every scenario becomes an end-to-end test that first passes on the Mendix app. The rebuild has to pass the same tests.</p></div>
+      <div class="card principle"><span class="num">2</span><h3>Reuse, don't redraw</h3><p>The rebuild compiles Mendix's own theme and renders the same markup, so the same CSS gives the same look.</p></div>
+      <div class="card principle"><span class="num">3</span><h3>Prove it on every push</h3><p>CI starts both apps, runs the tests on each and compares the rebuild's screenshots with Mendix's.</p></div>
+    </div>
+    <div class="ai-strip">
+      <img src="logos/claude.svg" alt="">
+      <p><b>All of it was done by AI.</b> Claude Code carried out every step in this deck, from reading the Mendix model to building this deck. People set the goal and reviewed the result.</p>
+    </div>
+  </section>
+
+  <!-- 3 Done by AI -->
+  <section class="slide" aria-label="Done by Claude Code">
+    <p class="kicker">The approach</p>
+    <h2>From a prompt to a migrated app</h2>
+    <div class="grid cols-2" style="grid-template-columns: 1fr 1.1fr">
+      <div class="prompt"><p>“I would like to do a pixel perfect rebuild of this app in NextJS. First build e2e tests with playwright cover all scenarios store them in the e2e folder. Use this as the input for the rebuild. rebuild the app in the nextjs folder. goal is to have the app rebuild functional and visual as close as possible. Would be nice if you build a component lib which can be reuse for future migrations. Use the same e2e tests to verify the rebuild app.”</p></div>
+      <div class="card did">
+        <h3><img src="logos/claude.svg" alt="">What Claude Code did</h3>
+        <ul>
+          <li>Read the <code>.mpr</code> model directly, without Studio Pro</li>
+          <li>Wrote 83 end-to-end tests from it</li>
+          <li>Wrote a theme compiler and a React component library</li>
+          <li>Rebuilt the pages, data, logic and security in Next.js</li>
+          <li>Ran the tests, found its own mismatches and fixed them</li>
+          <li>Set up CI that runs both apps, and made this deck</li>
+        </ul>
+        <p class="people">People: a handful of prompts like this one, and review.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 Steps -->
+  <section class="slide" aria-label="The steps">
+    <p class="kicker">The steps</p>
+    <h2>Six steps, with the original as the yardstick</h2>
+    <div class="flow">
+      <div class="step"><span class="num">1</span><h3>Read the model</h3><p>Pages, data, logic and security, straight from the project file.</p><div class="tech"><img src="logos/mendix.png" alt="Mendix"><img src="logos/sqlite.svg" alt="SQLite"></div></div>
+      <div class="step"><span class="num">2</span><h3>Capture behaviour</h3><p>End-to-end tests that pass on the Mendix app.</p><div class="tech"><img src="logos/playwright.svg" alt="Playwright"><img src="logos/typescript.svg" alt="TypeScript"></div></div>
+      <div class="step"><span class="num">3</span><h3>Carry over the look</h3><p>Compile Mendix's own theme for the new app.</p><div class="tech"><img src="logos/sass.svg" alt="Sass"><img src="logos/bootstrap.svg" alt="Bootstrap"></div></div>
+      <div class="step"><span class="num">4</span><h3>Build the components</h3><p>React components that render Mendix's markup.</p><div class="tech"><img src="logos/react.svg" alt="React"><img src="logos/typescript.svg" alt="TypeScript"></div></div>
+      <div class="step loop"><span class="num">5</span><h3>Rebuild the app</h3><p>Page by page, from those components.</p><div class="tech"><img src="logos/nextjs.svg" alt="Next.js"><img src="logos/nodejs.svg" alt="Node.js"></div></div>
+      <div class="step loop"><span class="num">6</span><h3>Prove parity</h3><p>Both apps, the same tests and screenshots, in CI.</p><div class="tech"><img src="logos/githubactions.svg" alt="GitHub Actions"><img src="logos/playwright.svg" alt="Playwright"></div></div>
+    </div>
+    <p class="loop-note"><b>5 ⇄ 6</b> repeat until every test passes on both apps and the screenshots match.</p>
+  </section>
+
+  <!-- 5 Step 1 -->
+  <section class="slide" aria-label="Step 1: read the model">
+    <div class="step-head">
+      <div><p class="kicker">Step 1 · Read the model</p><h2>Know exactly what you are rebuilding</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/mendix.png" alt="">Mendix</span><span class="logo"><img src="logos/sqlite.svg" alt="">SQLite</span></div>
+    </div>
+    <div class="phase">
+      <div class="card">
+        <h3><img src="logos/claude.svg" alt="">What Claude Code did</h3>
+        <ul>
+          <li>Opened <code>TodoApp.mpr</code> as the SQLite database it is, and decoded its BSON model units</li>
+          <li>Listed every page, layout and widget with its settings</li>
+          <li>Listed the entity, validation, microflow, roles and access rules</li>
+          <li>Collected the exact texts users see, such as the login error</li>
+        </ul>
+      </div>
+      <div class="io">
+        <div><b>In</b><p>The Mendix project, no running app needed</p></div>
+        <div><b>Out</b><p>An inventory: 1 module, 2 pages, 1 entity, 1 microflow, 2 roles</p></div>
+        <div class="done"><b>Done when</b><p>Every page and rule is accounted for</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 Step 2 -->
+  <section class="slide" aria-label="Step 2: capture behaviour">
+    <div class="step-head">
+      <div><p class="kicker">Step 2 · Capture behaviour</p><h2>The Mendix app writes the spec</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/playwright.svg" alt="">Playwright</span><span class="logo"><img src="logos/typescript.svg" alt="">TypeScript</span></div>
+    </div>
+    <div class="phase">
+      <div class="card">
+        <h3><img src="logos/claude.svg" alt="">What Claude Code did</h3>
+        <ul>
+          <li>Wrote scenarios in the users' terms: sign in, add a todo, filter, sort, page through</li>
+          <li>Found elements by what Mendix renders (<code>mx-name-*</code>), so one test drives both apps</li>
+          <li>Added 16 screenshots: light, dark and phone</li>
+          <li>Pointed one test project at Mendix and one at the rebuild</li>
+        </ul>
+      </div>
+      <div class="io">
+        <div><b>In</b><p>The inventory and the running Mendix app</p></div>
+        <div><b>Out</b><p>83 tests in <code>e2e/</code>, the acceptance criteria as code</p></div>
+        <div class="done"><b>Done when</b><p>The suite passes on Mendix</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 Step 3 -->
+  <section class="slide" aria-label="Step 3: carry over the look">
+    <div class="step-head">
+      <div><p class="kicker">Step 3 · Carry over the look</p><h2>The same stylesheet, not a lookalike</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/sass.svg" alt="">Sass</span><span class="logo"><img src="logos/bootstrap.svg" alt="">Bootstrap (Atlas)</span></div>
+    </div>
+    <div class="phase">
+      <div class="card">
+        <h3><img src="logos/claude.svg" alt="">What Claude Code did</h3>
+        <ul>
+          <li>Wrote a CLI that compiles the project's theme in the same order as Mendix's build</li>
+          <li>Took the widgets' CSS from their packages and generated the icon fonts</li>
+          <li>Reused the theme's own login page</li>
+        </ul>
+        <pre style="margin-top:16px"><span class="tk-t">$</span> npx atlas-theme --project ../mendix --out public</pre>
+      </div>
+      <div class="io">
+        <div><b>In</b><p>The Mendix theme, widget packages and icon collections</p></div>
+        <div><b>Out</b><p>The CSS the Mendix app serves, regenerated on every build</p></div>
+        <div class="done"><b>Done when</b><p>The new app builds with the original's styles</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 Step 4 -->
+  <section class="slide" aria-label="Step 4: build the components">
+    <div class="step-head">
+      <div><p class="kicker">Step 4 · Build the components</p><h2>A library that speaks Mendix markup</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/react.svg" alt="">React</span><span class="logo"><img src="logos/typescript.svg" alt="">TypeScript</span></div>
+    </div>
+    <div class="phase">
+      <div class="card">
+        <h3><img src="logos/claude.svg" alt="">What Claude Code did</h3>
+        <ul>
+          <li>Core widgets with Mendix's DOM and class names: layouts, layout grid, buttons, inputs, date picker, popup</li>
+          <li>Data grid 2 with its filters, Combo box and Language selector, matched to their packages</li>
+          <li>A data source hook, and a filter model that compiles to safe SQL</li>
+        </ul>
+      </div>
+      <div class="io">
+        <div><b>In</b><p>The widgets the inventory lists</p></div>
+        <div><b>Out</b><p><code>atlas-ui</code>: about 3,400 lines, reusable for the next app</p></div>
+        <div class="done"><b>Done when</b><p>Each widget renders the markup the theme expects</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 Step 5 -->
+  <section class="slide" aria-label="Step 5: rebuild the app">
+    <div class="step-head">
+      <div><p class="kicker">Step 5 · Rebuild the app</p><h2>Model element by model element</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/nextjs.svg" alt="">Next.js</span><span class="logo"><img src="logos/nodejs.svg" alt="">Node.js</span><span class="logo"><img src="logos/sqlite.svg" alt="">SQLite</span></div>
+    </div>
+    <div class="phase">
+      <table>
+        <thead><tr><th>Mendix</th><th>Rebuild</th></tr></thead>
+        <tbody>
+          <tr><td>Page and layout</td><td>Route built from the library</td></tr>
+          <tr><td>Entity and validation</td><td>Table and server-side checks</td></tr>
+          <tr><td>Microflow</td><td>Server function behind an API</td></tr>
+          <tr><td>Access rule</td><td>Every query scoped to the user</td></tr>
+          <tr><td>Data grid data source</td><td>Paged, sorted, filtered query</td></tr>
+          <tr><td>Demo users, login page</td><td>Same accounts, same page</td></tr>
+        </tbody>
+      </table>
+      <div class="io">
+        <div><b>In</b><p>A page from the inventory, and its tests</p></div>
+        <div><b>Out</b><p>The page in code: about 840 lines for the whole app</p></div>
+        <div class="done"><b>Done when</b><p>That page's tests pass on the rebuild</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 Step 6 -->
+  <section class="slide" aria-label="Step 6: prove parity">
+    <div class="step-head">
+      <div><p class="kicker">Step 6 · Prove parity</p><h2>Both apps, one suite, every push</h2></div>
+      <div class="logos"><span class="logo"><img src="logos/githubactions.svg" alt="">GitHub Actions</span><span class="logo"><img src="logos/playwright.svg" alt="">Playwright</span></div>
+    </div>
+    <div class="pipeline">
+      <div class="stage"><h3>Start both apps</h3><p>The rebuild, and the Mendix app from the same commit.</p></div>
+      <div class="link" aria-hidden="true">→</div>
+      <div class="stage"><h3>Run the suite on Mendix</h3><p>Its screenshots become the baselines.</p></div>
+      <div class="link" aria-hidden="true">→</div>
+      <div class="stage key"><h3>Run it on the rebuild</h3><p>Same tests; screenshots compared with Mendix's, within 1% of pixels.</p></div>
+    </div>
+    <div class="io" style="grid-template-columns: repeat(3, 1fr); margin-top: 22px;">
+      <div><b>In</b><p>Every push to the repository</p></div>
+      <div><b>Out</b><p>Reports, screenshot diffs and both apps' DOM, kept per run</p></div>
+      <div class="done"><b>Done when</b><p>All tests pass on both apps, and no screenshot differs</p></div>
+    </div>
+    <div class="ai-strip">
+      <img src="logos/claude.svg" alt="">
+      <p><b>Claude Code closed the loop:</b> after each run it diffed Mendix's DOM against the rebuild's, fixed every difference it found and pushed again, until all 85 tests passed on both apps.</p>
+    </div>
+  </section>
+
+  <!-- 11 Stack -->
+  <section class="slide" aria-label="Tech used">
+    <p class="kicker">The steps · Tech used</p>
+    <h2>The stack</h2>
+    <div class="wall">
+      <div class="card">
+        <h3>Source</h3>
+        <div class="tech-item"><img src="logos/mendix.png" alt=""><div>Mendix 11<small>Atlas UI, Data Widgets</small></div></div>
+        <div class="tech-item"><span class="mark">mx</span><div>mxcli<small>scripts and local runs</small></div></div>
+        <div class="tech-item"><img src="logos/sqlite.svg" alt=""><div>.mpr format<small>SQLite + BSON units</small></div></div>
+      </div>
+      <div class="card">
+        <h3>Rebuild</h3>
+        <div class="tech-item"><img src="logos/nextjs.svg" alt=""><div>Next.js<small>pages and API routes</small></div></div>
+        <div class="tech-item"><img src="logos/react.svg" alt=""><div>React</div></div>
+        <div class="tech-item"><img src="logos/typescript.svg" alt=""><div>TypeScript</div></div>
+        <div class="tech-item"><img src="logos/nodejs.svg" alt=""><div>Node.js<small>SQLite, BCrypt</small></div></div>
+      </div>
+      <div class="card">
+        <h3>Look &amp; feel</h3>
+        <div class="tech-item"><img src="logos/sass.svg" alt=""><div>Sass<small>Mendix theme compiled</small></div></div>
+        <div class="tech-item"><img src="logos/bootstrap.svg" alt=""><div>Bootstrap<small>Atlas's base layer</small></div></div>
+        <div class="tech-item"><img src="logos/datefns.svg" alt=""><div>date-fns<small>Mendix date formats</small></div></div>
+      </div>
+      <div class="card">
+        <h3>Test &amp; ship</h3>
+        <div class="tech-item"><img src="logos/playwright.svg" alt=""><div>Playwright<small>tests and screenshots</small></div></div>
+        <div class="tech-item"><img src="logos/githubactions.svg" alt=""><div>GitHub Actions<small>both apps per push</small></div></div>
+        <div class="tech-item"><img src="logos/github.svg" alt=""><div>GitHub Pages<small>this deck</small></div></div>
+      </div>
+    </div>
+    <div class="ai-strip">
+      <img src="logos/claude.svg" alt="">
+      <p><b>Claude Code</b> chose, wired up and wrote all of the above.</p>
+    </div>
+    <p class="credits">Logos: Simple Icons (CC0), the Playwright logo from its package (Apache-2.0), the Mendix logo from the project's theme. Trademarks belong to their owners. Type: IBM Plex (SIL OFL).</p>
+  </section>
+
+  <!-- 12 Proof: the overview -->
+  <section class="slide" aria-label="Proof: the todo list">
+    <p class="kicker">The proof</p>
+    <h2>Mendix or Next.js? Drag the line</h2>
+    <div class="proof">
+      <div>
+        <div class="compare">
+          <img src="proof/nextjs/overview.png" alt="The todo list in the Next.js rebuild">
+          <div class="top"><img src="proof/mendix/overview.png" alt="The todo list in the Mendix app"></div>
+          <input type="range" min="0" max="100" value="50" aria-label="Split between the Mendix screenshot (left) and the Next.js screenshot (right)">
+          <div class="handle" aria-hidden="true"></div>
+          <span class="side l"><img src="logos/mendix.png" alt="">Mendix</span>
+          <span class="side r"><img src="logos/nextjs-white.svg" alt="">Next.js</span>
+        </div>
+        <p class="hint">Left of the line: the Mendix app. Right: the rebuild. Both captured in CI on the same commit.</p>
+      </div>
+      <div class="verdict">
+        <div class="card"><b>0 pixels</b><span>differ, of the screen's 1,024,000: the two screenshots are identical</span></div>
+        <div class="card"><b>1%</b><span>is the most a screenshot may differ before the build fails</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 Proof: more screens -->
+  <section class="slide" aria-label="Proof: popup, dark mode and phone">
+    <p class="kicker">The proof</p>
+    <h2>Popups, dark mode and phones too</h2>
+    <div class="trio">
+      <figure>
+        <div class="compare">
+          <img src="proof/nextjs/popup-edit.png" alt="The edit popup in the Next.js rebuild">
+          <div class="top"><img src="proof/mendix/popup-edit.png" alt="The edit popup in the Mendix app"></div>
+          <input type="range" min="0" max="100" value="50" aria-label="Split between Mendix (left) and Next.js (right): edit popup">
+          <div class="handle" aria-hidden="true"></div>
+        </div>
+        <figcaption><span>Edit popup</span><b>identical</b></figcaption>
+      </figure>
+      <figure>
+        <div class="compare">
+          <img src="proof/nextjs/overview-dark.png" alt="The todo list in dark mode in the Next.js rebuild">
+          <div class="top"><img src="proof/mendix/overview-dark.png" alt="The todo list in dark mode in the Mendix app"></div>
+          <input type="range" min="0" max="100" value="50" aria-label="Split between Mendix (left) and Next.js (right): dark mode">
+          <div class="handle" aria-hidden="true"></div>
+        </div>
+        <figcaption><span>Dark mode</span><b>identical</b></figcaption>
+      </figure>
+      <figure>
+        <div class="compare">
+          <img src="proof/nextjs/overview-phone.png" alt="The todo list on a phone in the Next.js rebuild">
+          <div class="top"><img src="proof/mendix/overview-phone.png" alt="The todo list on a phone in the Mendix app"></div>
+          <input type="range" min="0" max="100" value="50" aria-label="Split between Mendix (left) and Next.js (right): phone">
+          <div class="handle" aria-hidden="true"></div>
+        </div>
+        <figcaption><span>Phone</span><b>identical</b></figcaption>
+      </figure>
+    </div>
+    <p class="hint">Mendix on the left of each line, Next.js on the right. Drag to compare.</p>
+  </section>
+
+  <!-- 14 Proof: the numbers -->
+  <section class="slide" aria-label="Proof: every screen and every test">
+    <p class="kicker">The proof</p>
+    <h2>Every screen, every test, both apps</h2>
+    <div class="results">
+      <div>
+        <ul class="screens" aria-label="Pixels that differ from Mendix, per screenshot">
+          <li><span>Login page</span><b class="ok">identical</b></li>
+          <li><span>Login, wrong password</span><b class="ok">identical</b></li>
+          <li><span>Empty todo list</span><b class="ok">identical</b></li>
+          <li><span>Todo list</span><b class="ok">identical</b></li>
+          <li><span>Row hover</span><b class="ok">identical</b></li>
+          <li><span>Sorted by title</span><b class="ok">identical</b></li>
+          <li><span>New todo popup</span><b class="ok">identical</b></li>
+          <li><span>Validation error</span><b class="ok">identical</b></li>
+          <li><span>Edit popup</span><b class="ok">identical</b></li>
+          <li><span>Priority combo box</span><b class="ok">identical</b></li>
+          <li><span>Date picker</span><b class="ok">identical</b></li>
+          <li><span>Priority filter</span><b class="ok">identical</b></li>
+          <li><span>Title filter operators</span><b class="ok">identical</b></li>
+          <li><span>Column selector</span><b class="ok">identical</b></li>
+          <li><span>Delete confirmation</span><b class="ok">identical</b></li>
+          <li><span>Dark mode</span><b class="ok">identical</b></li>
+          <li><span>Phone</span><b class="ok">identical</b></li>
+        </ul>
+        <p class="hint">Pixels that differ from the Mendix screenshot of the same screen. The build fails above 1%.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>85 / 85</b><span>tests pass on the Mendix app</span></div>
+        <div class="stat"><b>85 / 85</b><span>tests pass on the Next.js rebuild: the same tests</span></div>
+        <div class="stat"><b>17 of 17</b><span>screenshots identical to Mendix's, pixel for pixel</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 Business case -->
+  <section class="slide" aria-label="The business case">
+    <p class="kicker">The business case</p>
+    <h2>Why do this, and why it is now cheap</h2>
+    <div class="case">
+      <div class="card">
+        <h3>Why organisations move apps off Mendix</h3>
+        <ul>
+          <li><b>Cost:</b> no platform licences per user and per app</li>
+          <li><b>No lock-in:</b> code in git runs on any host and cloud</li>
+          <li><b>Talent:</b> React and TypeScript developers are easy to find</li>
+          <li><b>Engineering:</b> reviews, unit tests and standard CI/CD</li>
+          <li><b>Freedom:</b> any UX, library or integration</li>
+        </ul>
+      </div>
+      <div class="card how">
+        <h3>Why this approach changes the sums</h3>
+        <ul>
+          <li><b>AI does the work:</b> the migration costs prompts and review, not a project team</li>
+          <li><b>Low risk:</b> tests and screenshots prove nothing changed</li>
+          <li><b>No retraining:</b> users get the app they know</li>
+          <li><b>Reuse:</b> about 80% of the new code is a library for the next app</li>
+          <li><b>Gradual:</b> both apps run side by side until cut-over</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fit">
+      <p><b>Pays off for</b> stable apps with many users, and portfolios of similar apps.</p>
+      <p><b>Think twice for</b> apps that change weekly, or lean on many Marketplace modules.</p>
+    </div>
+  </section>
+
+  <div class="chrome" aria-hidden="true"><span>Rebuilding a Mendix app, pixel for pixel</span></div>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+</main>
+</div>
+<nav class="nav" aria-label="Slides">
+  <button type="button" id="prev" aria-label="Previous slide">←</button>
+  <span class="counter" id="counter" aria-live="polite"></span>
+  <button type="button" id="next" aria-label="Next slide">→</button>
+</nav>
+<script>
+  (function () {
+    var deck = document.getElementById("deck");
+    var slides = Array.prototype.slice.call(deck.querySelectorAll(".slide"));
+    var counter = document.getElementById("counter");
+    var progress = document.getElementById("progress");
+    var current = 0;
+
+    function fit() {
+      var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+      deck.style.transform = "scale(" + scale + ")";
+    }
+
+    function show(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach(function (slide, i) {
+        slide.classList.toggle("active", i === current);
+        slide.setAttribute("aria-hidden", i === current ? "false" : "true");
+      });
+      counter.textContent = current + 1 + " / " + slides.length;
+      progress.style.width = ((current + 1) / slides.length) * 100 + "%";
+      deck.classList.toggle("on-dark", slides[current].classList.contains("dark"));
+      if (location.hash !== "#" + (current + 1)) history.replaceState(null, "", "#" + (current + 1));
+    }
+
+    // Before/after sliders: the range input sets where the Mendix screenshot ends.
+    Array.prototype.forEach.call(document.querySelectorAll(".compare input"), function (input) {
+      var box = input.parentNode;
+      function update() { box.style.setProperty("--pos", input.value + "%"); }
+      input.addEventListener("input", update);
+      update();
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.target && event.target.tagName === "INPUT") return;
+      if (["ArrowRight", "ArrowDown", "PageDown", " "].indexOf(event.key) >= 0) { event.preventDefault(); show(current + 1); }
+      else if (["ArrowLeft", "ArrowUp", "PageUp"].indexOf(event.key) >= 0) { event.preventDefault(); show(current - 1); }
+      else if (event.key === "Home") show(0);
+      else if (event.key === "End") show(slides.length - 1);
+    });
+    document.getElementById("prev").addEventListener("click", function () { show(current - 1); });
+    document.getElementById("next").addEventListener("click", function () { show(current + 1); });
+
+    var touchX = null;
+    document.addEventListener("touchstart", function (e) { touchX = e.target.closest(".compare") ? null : e.touches[0].clientX; }, { passive: true });
+    document.addEventListener("touchend", function (e) {
+      if (touchX === null) return;
+      var dx = e.changedTouches[0].clientX - touchX;
+      if (Math.abs(dx) > 40) show(current + (dx < 0 ? 1 : -1));
+      touchX = null;
+    });
+
+    window.addEventListener("resize", fit);
+    window.addEventListener("hashchange", function () { show(parseInt(location.hash.slice(1), 10) - 1 || 0); });
+    fit();
+    show(parseInt(location.hash.slice(1), 10) - 1 || 0);
+  })();
+</script>
+</body>
+</html>
