@@ -65,6 +65,7 @@
   li::marker { color: var(--brand); }
   code, .mono { font-family: var(--mono); font-size: .9em; }
   :not(pre) > code { background: var(--brand-tint); color: var(--brand-deep); padding: 1px 6px; border-radius: 4px; }
+  .dark :not(pre) > code { background: var(--rail-2); color: var(--scan); }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px 22px; }
   .card p { font-size: 17px; }
   .card p:last-child { margin-bottom: 0; }
@@ -148,7 +149,92 @@
   @keyframes hot { 0% { opacity: 0; transform: scale(1.06); } 100% { opacity: 1; transform: none; } }
   @keyframes pop { 0% { opacity: 0; transform: translateX(14px); } 100% { opacity: 1; transform: none; } }
 
-  /* 4 · Harden: one dot per test, per app */
+  /* 4 · Capture: a blueprint of the app, used by a cursor; every action becomes a test */
+  .capture-wrap { display: grid; grid-template-columns: 688px 1fr; gap: 28px; align-items: start; }
+  .film { position: relative; width: 688px; height: 430px; border-radius: 8px; overflow: hidden; color: #cfe9e8; font-family: var(--sans);
+    background-color: #0f1a22; box-shadow: 0 0 0 1px var(--rail-line), 0 18px 40px rgba(0,0,0,.35);
+    background-image: linear-gradient(rgba(63,189,184,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(63,189,184,.07) 1px, transparent 1px);
+    background-size: 16px 16px; }
+  .film * { box-sizing: border-box; }
+  .bp-bar { height: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1.5px solid rgba(63,189,184,.5); font-size: 12px; }
+  .bp-user { font: 500 11px var(--mono); border: 1px solid rgba(63,189,184,.6); border-radius: 999px; padding: 2px 9px; transition: background-color .3s, color .3s; }
+  .bp-user.swap { background: var(--scan); color: #0b0e12; }
+  .bp-view { position: absolute; left: 0; right: 0; top: 34px; bottom: 0; transition: opacity .4s ease; }
+  .bp-page { padding: 12px 16px; }
+  .bp-h { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+  .bp-btn { display: inline-block; font-size: 11.5px; line-height: 1.2; border: 1.5px solid rgba(63,189,184,.7); border-radius: 4px; padding: 4px 9px; color: #cfe9e8; white-space: nowrap; }
+  .bp-btn.primary { background: var(--scan); color: #0b0e12; border-color: var(--scan); font-weight: 600; }
+  .bp-btn.danger { border-color: #e07a5f; color: #f2a48f; }
+  .bp-grid { margin-top: 10px; border: 1.5px solid rgba(63,189,184,.5); border-radius: 4px; }
+  .bp-cols { display: grid; grid-template-columns: 40px 1fr 70px 80px 186px; align-items: center; column-gap: 8px; padding: 0 10px; }
+  .bp-head { height: 26px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #8fc9c6; }
+  .bp-head span { display: inline-flex; align-items: center; gap: 4px; }
+  .bp-head i { font-style: normal; opacity: .55; }
+  .bp-head .on i { opacity: 1; color: #fff; }
+  .bp-filter { height: 32px; border-bottom: 1.5px solid rgba(63,189,184,.5); }
+  .bp-input { height: 22px; border: 1.2px solid rgba(63,189,184,.55); border-radius: 3px; font-size: 11.5px; padding: 0 6px; display: flex; align-items: center; color: #fff; background: rgba(15,26,34,.6); white-space: nowrap; overflow: hidden; }
+  .bp-input.focus { border-color: #fff; box-shadow: 0 0 0 2px rgba(63,189,184,.35); }
+  .bp-input.focus::after { content: ""; width: 1px; height: 13px; background: #fff; margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  .bp-input.invalid { border-color: #e07a5f; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .bp-rows { position: relative; height: 142px; }
+  .bp-row { position: absolute; left: 0; right: 0; height: 35px; border-bottom: 1px solid rgba(63,189,184,.2); font-size: 12px; transition: top .55s cubic-bezier(.3,.7,.3,1), opacity .35s ease, background-color .3s ease; }
+  .bp-row.hl { background: rgba(63,189,184,.16); }
+  .bp-row.out { opacity: 0; }
+  .bp-row > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bp-row .acts { display: flex; gap: 4px; }
+  .bp-row .bp-btn { padding: 3px 7px; font-size: 10.5px; }
+  .bp-check { width: 13px; height: 13px; border: 1.3px solid rgba(63,189,184,.7); border-radius: 3px; display: grid; place-items: center; font-size: 9px; line-height: 1; color: transparent; transition: background-color .25s; }
+  .bp-check.on { background: var(--scan); color: #0b0e12; }
+  .bp-empty { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 12px; color: #6f9896; opacity: 0; transition: opacity .3s; }
+  .bp-paging { text-align: right; font-size: 11px; color: #8fc9c6; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .bp-login { display: grid; place-items: center; }
+  .bp-card { width: 300px; border: 1.5px solid rgba(63,189,184,.6); border-radius: 6px; padding: 16px 20px 14px; background: rgba(15,26,34,.88); }
+  .bp-card h4, .bp-modal h4 { margin: 0 0 10px; font-size: 15px; font-weight: 600; color: #fff; }
+  .bp-label { font-size: 10.5px; color: #8fc9c6; margin: 8px 0 4px; }
+  .bp-card .bp-btn { display: block; text-align: center; margin-top: 14px; }
+  .bp-msg { font-size: 11px; color: #f2a48f; min-height: 15px; margin-top: 8px; }
+  .bp-back { position: absolute; inset: 0; background: rgba(5,10,14,.62); display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 3; }
+  .bp-back.open { opacity: 1; }
+  .bp-modal { width: 350px; border: 1.5px solid var(--scan); border-radius: 6px; background: #10202a; padding: 14px 18px; transform: translateY(10px); transition: transform .25s; }
+  .bp-back.open .bp-modal { transform: none; }
+  .bp-field { display: grid; grid-template-columns: 74px 1fr; column-gap: 10px; align-items: center; margin: 7px 0; font-size: 11px; color: #8fc9c6; }
+  .bp-val { grid-column: 2; font-size: 10.5px; color: #f2a48f; height: 0; overflow: hidden; transition: height .2s; }
+  .bp-val.on { height: 15px; margin-top: 3px; }
+  .bp-foot { display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(63,189,184,.3); }
+  .bp-modal p { font-size: 12.5px; margin: 0; color: #e6f3f2; }
+  .bp-cursor { position: absolute; left: 0; top: 0; width: 18px; height: 22px; z-index: 6; pointer-events: none; transform: translate(560px, 380px); transition: transform .6s cubic-bezier(.45,0,.2,1); }
+  .bp-cursor svg { display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+  .bp-cursor::before { content: ""; position: absolute; left: -12px; top: -12px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--scan); opacity: 0; }
+  .bp-cursor.click::before { animation: ring .45s ease-out; }
+  @keyframes ring { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.6); } }
+  .bp-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 7; }
+  .bp-flash.go { animation: flash .5s ease-out; }
+  @keyframes flash { 0% { opacity: .55; } 100% { opacity: 0; } }
+  .bp-tag { position: absolute; left: 12px; bottom: 12px; z-index: 5; font: 500 12px var(--mono); color: #fff; background: rgba(13,17,23,.85); border: 1px solid var(--rail-line); border-radius: 999px; padding: 5px 12px; }
+  .bp-rec { position: absolute; right: 12px; bottom: 12px; z-index: 5; font: 600 11px var(--mono); letter-spacing: .08em; color: #ff8a73; background: rgba(13,17,23,.85); border: 1px solid var(--rail-line); border-radius: 999px; padding: 5px 11px; }
+  .bp-rec::before { content: "●"; margin-right: 6px; animation: blink 1.2s steps(1) infinite; }
+  .bp-rec.done { color: var(--scan); }
+  .bp-rec.done::before { content: "✓"; animation: none; }
+
+  .captured { display: grid; gap: 12px; }
+  .cap-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cap-stats div { background: var(--rail-2); border: 1px solid var(--rail-line); border-radius: 6px; padding: 8px 12px; }
+  .cap-stats b { display: block; font-size: 28px; line-height: 1.05; color: #fff; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .cap-stats span { font-size: 12.5px; color: var(--rail-ink); }
+  .log { list-style: none; margin: 0; padding: 0; height: 208px; overflow: hidden; display: flex; flex-direction: column; gap: 6px; -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent); mask-image: linear-gradient(to bottom, #000 78%, transparent); }
+  .log li { margin: 0; flex: none; display: grid; grid-template-columns: 24px 1fr; gap: 9px; align-items: start; font-size: 13px; line-height: 1.3; color: var(--rail-ink); background: var(--rail-2); border: 1px solid var(--rail-line); border-left: 3px solid var(--scan); border-radius: 6px; padding: 6px 10px; animation: logIn .4s ease both; }
+  .log li:first-child { color: #fff; }
+  .log li b { font: 600 11px/17px var(--mono); color: #0b0e12; background: var(--scan); border-radius: 3px; text-align: center; }
+  @keyframes logIn { 0% { opacity: 0; transform: translateY(-8px); } 100% { opacity: 1; transform: none; } }
+  .cov { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+  .cov div { display: grid; grid-template-columns: 1fr auto; row-gap: 3px; font: 400 11.5px var(--mono); color: var(--rail-ink); }
+  .cov div span:last-of-type { color: #7d8896; }
+  .cov div.full span:last-of-type { color: var(--scan); }
+  .cov i { grid-column: 1 / -1; height: 4px; background: var(--rail-line); border-radius: 2px; overflow: hidden; }
+  .cov i::after { content: ""; display: block; height: 100%; width: var(--w, 0%); background: var(--scan); transition: width .7s ease; }
+
+  /* 5 · Harden: one dot per test, per app */
   .harden { display: grid; grid-template-columns: 1fr 360px; gap: 26px; align-items: start; }
   .board { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 18px 10px; }
   .board-row { display: grid; grid-template-columns: 200px 238px 238px; column-gap: 18px; align-items: center; padding: 4px 0; border-bottom: 1px solid #edf0f3; }
@@ -275,8 +361,8 @@
     <h2>One prompt, four steps, the original as the yardstick</h2>
     <div class="prompt"><p>“I would like to do a pixel perfect rebuild of this app in NextJS. First build e2e tests with playwright cover all scenarios … Use the same e2e tests to verify the rebuild app.”</p></div>
     <div class="flow">
-      <div class="step"><span class="num">1</span><h3>Scan</h3><p>Read every page, widget, rule and role straight from the Mendix model.</p><div class="tech"><img src="logos/mendix.png" alt="Mendix"><img src="logos/sqlite.svg" alt="SQLite"></div></div>
-      <div class="step"><span class="num">2</span><h3>Harden</h3><p>85 end-to-end tests that pass on Mendix, then run on the rebuild until it passes too.</p><div class="tech"><img src="logos/playwright.svg" alt="Playwright"><img src="logos/githubactions.svg" alt="GitHub Actions"></div></div>
+      <div class="step"><span class="num">1</span><h3>Scan</h3><p>Trace every widget to the model, and capture every behaviour as a test.</p><div class="tech"><img src="logos/mendix.png" alt="Mendix"><img src="logos/sqlite.svg" alt="SQLite"><img src="logos/playwright.svg" alt="Playwright"></div></div>
+      <div class="step"><span class="num">2</span><h3>Harden</h3><p>Run the 85 tests on Mendix, then on the rebuild until it passes too.</p><div class="tech"><img src="logos/playwright.svg" alt="Playwright"><img src="logos/githubactions.svg" alt="GitHub Actions"></div></div>
       <div class="step"><span class="num">3</span><h3>Rebuild</h3><p>Next.js, with Mendix's own theme and a component library that renders its markup.</p><div class="tech"><img src="logos/nextjs.svg" alt="Next.js"><img src="logos/react.svg" alt="React"><img src="logos/sass.svg" alt="Sass"></div></div>
       <div class="step"><span class="num">4</span><h3>Compare</h3><p>The original and the migrated app, screen by screen, pixel by pixel.</p><div class="tech"><img src="logos/mendix.png" alt="Mendix"><img src="logos/nextjs.svg" alt="Next.js"></div></div>
     </div>
@@ -289,7 +375,7 @@
   <!-- 3 Scan -->
   <section class="slide dark" aria-label="Step 1: scan the app" data-anim="scan">
     <div class="head">
-      <div><p class="kicker">Step 1 · Scan</p><h2>Every pixel traced back to the model</h2></div>
+      <div><p class="kicker">Step 1 · Scan the look</p><h2>Every pixel traced back to the model</h2></div>
       <button type="button" class="replay" data-replay>↻ Replay</button>
     </div>
     <div class="scan-wrap">
@@ -332,7 +418,69 @@
     <p class="hint">Claude Code read the project file directly, without Studio Pro. Orange: found in the model only, it has no pixels.</p>
   </section>
 
-  <!-- 4 Harden -->
+  <!-- 4 Scan the behaviour -->
+  <section class="slide dark" aria-label="Step 1: capture every behaviour as a test" data-anim="capture">
+    <div class="head">
+      <div><p class="kicker">Step 1 · Scan the behaviour</p><h2>Every behaviour captured as a test</h2></div>
+      <button type="button" class="replay" data-replay>↻ Replay</button>
+    </div>
+    <div class="capture-wrap">
+      <div class="film" id="film" aria-label="A blueprint of the todo app, used step by step">
+        <div class="bp-bar"><span>☰&nbsp; Todos</span><span class="bp-user" id="bp-user">signed out</span></div>
+        <div class="bp-view bp-login" id="bp-login">
+          <div class="bp-card">
+            <h4>Sign in</h4>
+            <div class="bp-label">User name</div><div class="bp-input" id="bp-username"></div>
+            <div class="bp-label">Password</div><div class="bp-input" id="bp-password"></div>
+            <span class="bp-btn primary" id="bp-signin">Sign in</span>
+            <div class="bp-msg" id="bp-msg"></div>
+          </div>
+        </div>
+        <div class="bp-view bp-page" id="bp-page">
+          <div class="bp-h">My todos</div>
+          <span class="bp-btn primary" id="bp-new">New todo</span>
+          <div class="bp-grid">
+            <div class="bp-cols bp-head" id="bp-head"><span>Done</span><span id="bp-sort-title">Title <i>↕</i></span><span>Priority</span><span>Due date</span><span>Actions</span></div>
+            <div class="bp-cols bp-filter"><span></span><div class="bp-input" id="bp-filter"></div><span></span><span></span><span></span></div>
+            <div class="bp-rows" id="bp-rows"><div class="bp-empty" id="bp-empty">No results</div></div>
+          </div>
+          <div class="bp-paging" id="bp-paging"></div>
+        </div>
+        <div class="bp-back" id="bp-popup">
+          <div class="bp-modal">
+            <h4>Edit todo</h4>
+            <div class="bp-field">Title<div class="bp-input" id="bp-title"></div><div class="bp-val" id="bp-val">Title is required</div></div>
+            <div class="bp-field">Description<div class="bp-input"></div></div>
+            <div class="bp-field">Due date<div class="bp-input" id="bp-due"></div></div>
+            <div class="bp-field">Priority<div class="bp-input">Medium</div></div>
+            <div class="bp-field">Done<div><span class="bp-check"></span></div></div>
+            <div class="bp-foot"><span class="bp-btn primary" id="bp-save">Save</span><span class="bp-btn">Cancel</span></div>
+          </div>
+        </div>
+        <div class="bp-back" id="bp-confirm">
+          <div class="bp-modal">
+            <p>Are you sure you want to delete this?</p>
+            <div class="bp-foot"><span class="bp-btn">Cancel</span><span class="bp-btn primary" id="bp-ok">OK</span></div>
+          </div>
+        </div>
+        <div class="bp-cursor" id="bp-cursor"><svg width="18" height="22" viewBox="0 0 18 22" aria-hidden="true"><path d="M1 1 L1 17 L5.5 13 L8.5 20.5 L11.5 19.2 L8.6 12 L14.5 12 Z" fill="#fff" stroke="#0b0e12" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+        <div class="bp-flash" id="bp-flash"></div>
+        <span class="bp-tag" id="bp-tag">e2e/tests</span>
+        <span class="bp-rec" id="bp-rec">REC</span>
+      </div>
+      <div class="captured">
+        <div class="cap-stats">
+          <div><b id="cap-tests">0</b><span>tests captured</span></div>
+          <div><b id="cap-shots">0</b><span>screenshot baselines</span></div>
+        </div>
+        <ul class="log" id="cap-log" aria-label="Tests captured, newest first"></ul>
+        <div class="cov" id="cap-cov" aria-label="Tests per spec"></div>
+      </div>
+    </div>
+    <p class="hint">A replay of how the suite was captured. Every test name shown is a real test in <code>e2e/tests</code>; the bars are the real counts per spec.</p>
+  </section>
+
+  <!-- 5 Harden -->
   <section class="slide" aria-label="Step 2: harden with end-to-end tests" data-anim="harden">
     <div class="head">
       <div><p class="kicker">Step 2 · Harden</p><h2>The same 85 tests, until both apps pass</h2></div>
@@ -373,7 +521,7 @@
     <p class="hint">A replay of the loop: the tests per spec are real, the red dots are schematic, and the fixes are the ones in the repository's history.</p>
   </section>
 
-  <!-- 5 Rebuild -->
+  <!-- 6 Rebuild -->
   <section class="slide" aria-label="Step 3: rebuild">
     <p class="kicker">Step 3 · Rebuild</p>
     <h2>Same markup, same stylesheet, a new stack</h2>
@@ -405,7 +553,7 @@
     </div>
   </section>
 
-  <!-- 6 Compare -->
+  <!-- 7 Compare -->
   <section class="slide" aria-label="Step 4: compare the original and the migrated app" data-anim="compare">
     <p class="kicker">Step 4 · Compare</p>
     <h2>The original and the migrated app</h2>
@@ -463,7 +611,7 @@
     var timers = [];
 
     function later(ms, fn) { timers.push(setTimeout(fn, reduced ? 0 : ms)); }
-    function stopAll() { timers.forEach(clearTimeout); timers = []; }
+    function stopAll() { timers.forEach(clearTimeout); timers = []; capToken++; }
 
     function fit() {
       var scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
@@ -564,6 +712,193 @@
       });
     }
 
+    // ---- Step 1b: capture the behaviour. A cursor uses a blueprint of the app; each action is logged as a real test. ----
+    var film = document.getElementById("film");
+    var $ = function (id) { return document.getElementById(id); };
+    var bp = {
+      user: $("bp-user"), login: $("bp-login"), page: $("bp-page"), username: $("bp-username"), password: $("bp-password"),
+      signin: $("bp-signin"), msg: $("bp-msg"), newBtn: $("bp-new"), sortTitle: $("bp-sort-title"), head: $("bp-head"),
+      filter: $("bp-filter"), rows: $("bp-rows"), empty: $("bp-empty"), paging: $("bp-paging"), popup: $("bp-popup"),
+      title: $("bp-title"), val: $("bp-val"), due: $("bp-due"), save: $("bp-save"), confirm: $("bp-confirm"), ok: $("bp-ok"),
+      cursor: $("bp-cursor"), flash: $("bp-flash"), tag: $("bp-tag"), rec: $("bp-rec"),
+      tests: $("cap-tests"), shots: $("cap-shots"), log: $("cap-log"), cov: $("cap-cov")
+    };
+    var covBars = specs.map(function (sp) {
+      var d = document.createElement("div");
+      d.innerHTML = "<span>" + sp[0] + "</span><span>0/" + sp[1] + "</span><i></i>";
+      bp.cov.appendChild(d);
+      return d;
+    });
+    var capToken = 0, cap = {};
+
+    function fresh() {
+      return {
+        rows: [
+          { id: "a", t: "Buy groceries", p: "High", d: "3/10/2031", k: 20310310, done: false },
+          { id: "b", t: "Call the plumber", p: "Medium", d: "3/12/2031", k: 20310312, done: false },
+          { id: "c", t: "Renew passport", p: "Low", d: "4/1/2031", k: 20310401, done: true }
+        ],
+        sort: null, filter: "", tests: 0, shots: 0, els: {}
+      };
+    }
+    // Default sort of the data source: open first, then by due date. A header click sorts by title instead.
+    function visible() {
+      var list = cap.rows.filter(function (r) { return r.t.toLowerCase().indexOf(cap.filter) >= 0; });
+      list.sort(function (x, y) {
+        if (cap.sort) return (x.t < y.t ? -1 : 1) * (cap.sort === "asc" ? 1 : -1);
+        return (x.done - y.done) || (x.k - y.k);
+      });
+      return list;
+    }
+    function rowEl(r) {
+      var el = cap.els[r.id];
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "bp-row bp-cols out";
+        el.innerHTML = '<span><span class="bp-check"></span></span><span></span><span></span><span></span>' +
+          '<span class="acts"><span class="bp-btn" data-act="toggle">Done / undo</span><span class="bp-btn">Edit</span><span class="bp-btn danger" data-act="delete">Delete</span></span>';
+        el.style.top = "0px";
+        bp.rows.appendChild(el);
+        cap.els[r.id] = el;
+      }
+      var c = el.children;
+      c[0].firstChild.className = "bp-check" + (r.done ? " on" : "");
+      c[0].firstChild.textContent = "✓";
+      c[1].textContent = r.t; c[2].textContent = r.p; c[3].textContent = r.d;
+      return el;
+    }
+    function layout() {
+      var list = visible(), shown = {};
+      list.forEach(function (r, i) { var el = rowEl(r); el.style.top = i * 35 + "px"; el.classList.remove("out"); shown[r.id] = true; });
+      Object.keys(cap.els).forEach(function (id) { if (!shown[id]) cap.els[id].classList.add("out"); });
+      bp.empty.style.opacity = list.length ? 0 : 1;
+      bp.paging.textContent = list.length ? "1 to " + list.length + " of " + list.length : "0 to 0 of 0";
+      bp.sortTitle.classList.toggle("on", !!cap.sort);
+      bp.sortTitle.querySelector("i").textContent = cap.sort === "asc" ? "↑" : cap.sort === "desc" ? "↓" : "↕";
+    }
+    function resetCapture() {
+      cap = fresh();
+      bp.rows.innerHTML = ""; bp.rows.appendChild(bp.empty);
+      [bp.username, bp.password, bp.filter, bp.title, bp.due].forEach(function (el) { el.textContent = ""; el.classList.remove("focus", "invalid"); });
+      bp.msg.textContent = ""; bp.val.classList.remove("on");
+      bp.login.style.opacity = 1; bp.page.style.opacity = 0;
+      bp.popup.classList.remove("open"); bp.confirm.classList.remove("open");
+      bp.user.textContent = "signed out"; bp.user.classList.remove("swap");
+      bp.cursor.style.transition = "none"; bp.cursor.style.transform = "translate(560px, 380px)";
+      void bp.cursor.offsetWidth; bp.cursor.style.transition = "";
+      bp.tag.textContent = "e2e/tests"; bp.rec.textContent = "REC"; bp.rec.classList.remove("done");
+      bp.tests.textContent = "0"; bp.shots.textContent = "0"; bp.log.innerHTML = "";
+      covBars.forEach(function (d, i) { d.classList.remove("full"); d.querySelector("i").style.setProperty("--w", "0%"); d.children[1].textContent = "0/" + specs[i][1]; });
+      layout();
+    }
+
+    function runCapture() {
+      var tok = ++capToken;
+      function wait(ms) { return new Promise(function (ok, no) { setTimeout(function () { tok === capToken ? ok() : no("stopped"); }, reduced ? 0 : ms); }); }
+      function point(el, fx) {
+        var f = film.getBoundingClientRect(), r = el.getBoundingClientRect(), k = f.width / 688;
+        return [(r.left - f.left + r.width * (fx == null ? .5 : fx)) / k, (r.top - f.top + r.height * .55) / k];
+      }
+      function move(el, fx) { var xy = point(el, fx); bp.cursor.style.transform = "translate(" + xy[0] + "px," + xy[1] + "px)"; return wait(650); }
+      function click() { bp.cursor.classList.remove("click"); void bp.cursor.offsetWidth; bp.cursor.classList.add("click"); return wait(260); }
+      function press(el, fx) { return move(el, fx).then(click); }
+      function type(el, text, ms) {
+        el.classList.add("focus");
+        var p = Promise.resolve();
+        text.split("").forEach(function (ch) { p = p.then(function () { el.textContent += ch; return wait(ms || 70); }); });
+        return p.then(function () { el.classList.remove("focus"); });
+      }
+      function scene(name) { bp.tag.textContent = name; }
+      function log(spec, name) {
+        var li = document.createElement("li");
+        li.innerHTML = "<b>" + spec + "</b><span></span>";
+        li.lastChild.textContent = name;
+        bp.log.insertBefore(li, bp.log.firstChild);
+      }
+      function fill(i) {
+        var d = covBars[i];
+        if (d.classList.contains("full")) return;
+        d.classList.add("full"); d.querySelector("i").style.setProperty("--w", "100%");
+        d.children[1].textContent = specs[i][1] + "/" + specs[i][1];
+        cap.tests += specs[i][1]; bp.tests.textContent = cap.tests;
+      }
+      function shot(n) {
+        bp.flash.classList.remove("go"); void bp.flash.offsetWidth; bp.flash.classList.add("go");
+        cap.shots = n || cap.shots + 1; bp.shots.textContent = cap.shots;
+      }
+      function rowBtn(id, act) { return cap.els[id].querySelector('[data-act="' + act + '"]'); }
+
+      resetCapture();
+      return wait(500)
+        // 01 · sign in: a wrong password first, then the right one
+        .then(function () { scene("01-sign-in"); return press(bp.username, .2); })
+        .then(function () { return type(bp.username, "demo_user"); })
+        .then(function () { return press(bp.password, .2); })
+        .then(function () { return type(bp.password, "••••••"); })
+        .then(function () { return press(bp.signin); })
+        .then(function () { bp.msg.textContent = "The user name or password you entered is incorrect."; shot(); log("01", "a wrong password is refused"); return wait(1100); })
+        .then(function () { bp.password.textContent = ""; bp.msg.textContent = ""; return press(bp.password, .2); })
+        .then(function () { return type(bp.password, "••••••••", 55); })
+        .then(function () { return press(bp.signin); })
+        .then(function () {
+          bp.login.style.opacity = 0; bp.page.style.opacity = 1; bp.user.textContent = "demo_user";
+          log("01", "demo_user signs in and lands on the todo list"); fill(0); return wait(900);
+        })
+        // 02 · layout
+        .then(function () { scene("02-layout"); return move(bp.head, .3); })
+        .then(function () { shot(); log("02", "the grid has the five columns of the model"); fill(1); return wait(900); })
+        // 03 · create: the validation first, then a todo
+        .then(function () { scene("03-create"); return press(bp.newBtn); })
+        .then(function () { bp.popup.classList.add("open"); log("03", "New todo opens an empty Edit todo popup with the model's defaults"); return wait(800); })
+        .then(function () { return press(bp.save); })
+        .then(function () { bp.val.classList.add("on"); bp.title.classList.add("invalid"); shot(); log("03", "a todo needs a title"); return wait(1100); })
+        .then(function () { bp.val.classList.remove("on"); bp.title.classList.remove("invalid"); return press(bp.title, .2); })
+        .then(function () { return type(bp.title, "Pay rent"); })
+        .then(function () { return press(bp.due, .2); })
+        .then(function () { return type(bp.due, "3/5/2031", 60); })
+        .then(function () { return press(bp.save); })
+        .then(function () {
+          bp.popup.classList.remove("open");
+          cap.rows.push({ id: "d", t: "Pay rent", p: "Medium", d: "3/5/2031", k: 20310305, done: false });
+          layout(); cap.els.d.classList.add("hl"); fill(2); fill(3); return wait(1000);
+        })
+        // 05 · done / undo
+        .then(function () { scene("05-toggle-delete"); cap.els.d.classList.remove("hl"); return press(rowBtn("d", "toggle")); })
+        .then(function () { cap.rows[3].done = true; layout(); log("05", "Done / undo marks an open todo done and moves it below the open ones"); return wait(1300); })
+        // 06 · sorting
+        .then(function () { scene("06-grid-sorting"); return press(bp.sortTitle, .3); })
+        .then(function () { cap.sort = "asc"; layout(); return wait(700); })
+        .then(click)
+        .then(function () { cap.sort = "desc"; layout(); shot(); log("06", "clicking a header sorts by it, again reverses, a third time clears"); return wait(1100); })
+        .then(click)
+        .then(function () { cap.sort = null; layout(); fill(5); return wait(700); })
+        // 07 · filters, 08 · paging
+        .then(function () { scene("07-grid-filters"); return press(bp.filter, .2); })
+        .then(function () { return type(bp.filter, "PA", 160); })
+        .then(function () { cap.filter = "pa"; layout(); log("07", "the title filter keeps rows that contain the text, ignoring case"); return wait(1300); })
+        .then(function () { bp.filter.textContent = ""; cap.filter = ""; layout(); log("07", "clearing the title filter brings every row back"); fill(6); fill(7); return wait(900); })
+        // 05 · delete with confirmation
+        .then(function () { scene("05-toggle-delete"); return press(rowBtn("a", "delete")); })
+        .then(function () { bp.confirm.classList.add("open"); shot(); return wait(800); })
+        .then(function () { return press(bp.ok); })
+        .then(function () {
+          bp.confirm.classList.remove("open");
+          cap.rows = cap.rows.filter(function (r) { return r.id !== "a"; }); layout();
+          log("05", "Delete asks for confirmation, and OK removes the todo"); fill(4); return wait(1100);
+        })
+        // 09 · security: another user sees only their own todos
+        .then(function () { scene("09-security"); return move(bp.user); })
+        .then(click)
+        .then(function () {
+          bp.user.textContent = "demo_administrator"; bp.user.classList.add("swap");
+          cap.rows = [{ id: "z", t: "Admin only", p: "Medium", d: "", k: 0, done: false }]; layout();
+          log("09", "todos of demo_administrator and demo_user stay apart"); fill(8); return wait(1400);
+        })
+        // 10 · visual: the screenshots taken along the way, plus dark mode and phone
+        .then(function () { scene("10-visual"); bp.user.classList.remove("swap"); shot(17); log("10", "todo list in dark mode"); log("10", "todo list on a phone"); fill(9); return wait(900); })
+        .then(function () { scene("85 tests · 17 screenshots"); bp.rec.textContent = "CAPTURED"; bp.rec.classList.add("done"); bp.cursor.style.transform = "translate(560px, 380px)"; });
+    }
+
     // ---- Step 4: compare the two apps ----
     var compare = document.getElementById("compare");
     var range = compare.querySelector("input");
@@ -622,6 +957,7 @@
       slide.classList.add("play");
       var anim = slide.getAttribute("data-anim");
       if (anim === "harden") playHarden();
+      if (anim === "capture") runCapture().catch(function () {});
       if (anim === "compare") later(350, sweep);
     }
     Array.prototype.forEach.call(document.querySelectorAll("[data-replay]"), function (el) {
