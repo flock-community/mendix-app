@@ -23,7 +23,7 @@ taken from Mendix is the baseline the rebuild is compared with.
 | `07-grid-filters` | Title contains (case-insensitive), clear, no match, operator Starts with, Done and Priority drop-downs and their options, Due date, filters combined, new todo hidden by a filter |
 | `08-grid-paging-columns` | 20 rows per page and the four paging buttons, empty list, column selector hide/show, last column cannot be hidden, column resize |
 | `09-security` | Each user sees only their own todos, one user's deletes do not touch the other, two sessions of one user |
-| `10-visual` | 16 screenshots: login, login error, empty and filled list, hover, sorted, new/edit popups, validation, open combo box, calendar, filters, column selector, dark mode, phone |
+| `10-visual` | 17 screenshots: login, login error, empty and filled list, hover, sorted, new/edit popups, validation, open combo box, calendar, filters, column selector, delete confirmation, dark mode, phone |
 
 Every selector is something the Mendix runtime renders: the `mx-name-<widget>`
 class Mendix puts on each named widget, the Data grid 2, filter and Combo box
